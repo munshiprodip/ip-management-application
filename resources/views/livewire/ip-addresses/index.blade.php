@@ -31,43 +31,61 @@
         <div class="flex flex-wrap items-center gap-3">
             <div>
                 <label class="block text-[11px] font-mono text-slate-500 uppercase mb-1">Target Subnet:</label>
-                <select
-                    wire:model.live="selectedSubnetId"
-                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-semibold focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="Select Target Subnet..."
+                    searchPlaceholder="Search by CIDR or subnet name..."
+                    containerClass="min-w-[280px]"
                 >
-                    @forelse($subnets as $sub)
-                        <option value="{{ $sub->id }}">{{ $sub->cidr }} — {{ $sub->name }}{{ $sub->site ? ' [' . $sub->site->code . ']' : '' }}</option>
-                    @empty
-                        <option value="">No assignable subnets available</option>
-                    @endforelse
-                </select>
+                    <select
+                        wire:model.live="selectedSubnetId"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-semibold"
+                    >
+                        @forelse($subnets as $sub)
+                            <option value="{{ $sub->id }}">{{ $sub->cidr }} — {{ $sub->name }}{{ $sub->site ? ' [' . $sub->site->code . ']' : '' }}</option>
+                        @empty
+                            <option value="">No assignable subnets available</option>
+                        @endforelse
+                    </select>
+                </x-searchable-select>
             </div>
 
             <div>
                 <label class="block text-[11px] font-mono text-slate-500 uppercase mb-1">Status Filter:</label>
-                <select
-                    wire:model.live="statusFilter"
-                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="All Address Candidates"
+                    searchPlaceholder="Search candidate status..."
+                    containerClass="min-w-[190px]"
                 >
-                    <option value="all">All Address Candidates</option>
-                    <option value="unassigned">Available (Unassigned)</option>
-                    <option value="assigned">Assigned</option>
-                    <option value="reserved">Reserved</option>
-                    <option value="quarantined">Quarantined</option>
-                </select>
+                    <select
+                        wire:model.live="statusFilter"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    >
+                        <option value="all">All Address Candidates</option>
+                        <option value="unassigned">Available (Unassigned)</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="quarantined">Quarantined</option>
+                    </select>
+                </x-searchable-select>
             </div>
 
             <div>
                 <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Host Type Filter:</label>
-                <select
-                    wire:model.live="hostTypeFilter"
-                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 font-medium"
+                <x-searchable-select 
+                    placeholder="All Host Types"
+                    searchPlaceholder="Search host type..."
+                    containerClass="min-w-[190px]"
                 >
-                    <option value="all">All Host Types</option>
-                    @foreach($hostTypes as $ht)
-                        <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }}</option>
-                    @endforeach
-                </select>
+                    <select
+                        wire:model.live="hostTypeFilter"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                    >
+                        <option value="all">All Host Types</option>
+                        @foreach($hostTypes as $ht)
+                            <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }}</option>
+                        @endforeach
+                    </select>
+                </x-searchable-select>
             </div>
         </div>
 
@@ -330,27 +348,37 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Classification *</label>
-                            <select
-                                wire:model="alloc_classification"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            <x-searchable-select 
+                                placeholder="Select Classification..."
+                                searchPlaceholder="Search classification..."
                             >
-                                @foreach($classifications as $c)
-                                    <option value="{{ $c->value }}">{{ $c->label() }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="alloc_classification"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                                >
+                                    @foreach($classifications as $c)
+                                        <option value="{{ $c->value }}">{{ $c->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
 
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type</label>
-                            <select
-                                wire:model="alloc_host_type"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                            <x-searchable-select 
+                                placeholder="None / Unspecified"
+                                searchPlaceholder="Search host type..."
                             >
-                                <option value="">None / Unspecified</option>
-                                @foreach($hostTypes as $ht)
-                                    <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }} {{ !empty($ht->description) ? '— ' . $ht->description : '' }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="alloc_host_type"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                                >
+                                    <option value="">None / Unspecified</option>
+                                    @foreach($hostTypes as $ht)
+                                        <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }} {{ !empty($ht->description) ? '— ' . $ht->description : '' }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                             @error('alloc_host_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
                     </div>
@@ -635,15 +663,20 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type</label>
-                            <select
-                                wire:model="edit_host_type"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                            <x-searchable-select 
+                                placeholder="None / Unspecified"
+                                searchPlaceholder="Search host type..."
                             >
-                                <option value="">None / Unspecified</option>
-                                @foreach($hostTypes as $ht)
-                                    <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }} {{ !empty($ht->description) ? '— ' . $ht->description : '' }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="edit_host_type"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                                >
+                                    <option value="">None / Unspecified</option>
+                                    @foreach($hostTypes as $ht)
+                                        <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }} {{ !empty($ht->description) ? '— ' . $ht->description : '' }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                             @error('edit_host_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
 

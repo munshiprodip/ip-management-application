@@ -29,34 +29,6 @@
             </div>
         </div>
 
-        <!-- Safety Status Banner -->
-        <div class="px-4 py-2.5 bg-slate-950/40 border-b border-slate-800/80 text-[11px] flex flex-col gap-1.5">
-            <div class="flex items-center justify-between">
-                <span class="text-slate-400">Discovery Engine:</span>
-                @if(config('ipam.discovery_enabled'))
-                    <span class="inline-flex items-center gap-1 font-semibold text-amber-400 font-mono">
-                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> ACTIVE
-                    </span>
-                @else
-                    <span class="inline-flex items-center gap-1 font-semibold text-emerald-400 font-mono">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> SAFE / OFF
-                    </span>
-                @endif
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-slate-400">Network Writes:</span>
-                @if(config('ipam.external_writes_enabled'))
-                    <span class="inline-flex items-center gap-1 font-semibold text-rose-400 font-mono">
-                        <span class="w-2 h-2 rounded-full bg-rose-400"></span> ENABLED
-                    </span>
-                @else
-                    <span class="inline-flex items-center gap-1 font-semibold text-slate-300 font-mono">
-                        <span class="w-2 h-2 rounded-full bg-slate-500"></span> LOCKED
-                    </span>
-                @endif
-            </div>
-        </div>
-
         <!-- Navigation Links -->
         <nav class="flex-1 overflow-y-auto px-3 py-3 space-y-1 text-xs">
             <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Core IPAM</div>
@@ -122,26 +94,18 @@
                 <h2 class="text-base font-semibold text-slate-900 dark:text-white leading-tight">
                     {{ $header ?? 'KYAMCH Smart IPAM Operations' }}
                 </h2>
-                <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">
-                    {{ config('ipam.system_code') }} v1.0.0
-                </span>
 
                 <!-- Top Global Campus Switcher -->
                 <div class="h-4 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
                 @livewire('components.campus-switcher')
             </div>
 
-            <!-- Context Status Pills -->
+            <!-- Operations Badge -->
             <div class="flex items-center gap-3 text-xs">
-                <div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">
-                    <span class="text-slate-400">DB:</span> {{ config('database.default') }}
-                </div>
-                <div class="hidden md:flex items-center gap-2 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">
-                    <span class="text-slate-400">TZ:</span> {{ config('ipam.default_timezone') }}
-                </div>
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-medium font-mono">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> SAFE
-                </div>
+                <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Operational
+                </span>
             </div>
         </header>
 

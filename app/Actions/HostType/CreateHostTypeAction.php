@@ -46,3 +46,4 @@ class CreateHostTypeAction
         return $hostType;
     }
 }
+

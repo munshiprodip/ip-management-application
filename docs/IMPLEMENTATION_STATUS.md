@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 2.4.0 (Streamlined Core Architecture with Dedicated Host Types Management & Quarantined Device Handling)  
+> **Current Version:** 2.5.0 (Streamlined Core Architecture with Universal Searchable Selects, Dashboard Host Type Breakdown & Clean Production UI)  
 > **Last Updated:** 2026-11-22  
 > **Architecture Scope:** Focused Core IPAM with Top-Level Site / Campus Segregation (Sites/Campuses, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations, Host Types Management)  
-> **Status:** All 95 Automated Tests Passing (100% Pass Rate)
+> **Status:** All 98 Automated Tests Passing (100% Pass Rate)
 
 ---
 
@@ -65,27 +65,38 @@ Per architectural requirements, the application delivers focused, enterprise-gra
    - Active/inactive state toggles for phasing out obsolete categories.
    - Direct integration into IP allocation forms, quick-edit modals, and candidate window filters.
 
+6. **Universal Searchable Select Dropdowns (`<x-searchable-select>`)**
+   - Replaced all 25 native `<select>` elements with enterprise searchable comboboxes.
+   - **Click Autofocus**: Clicking any dropdown immediately auto-focuses the search input field for instant operator typing without extra clicks.
+   - Real-time case-insensitive option filtering across labels and values.
+   - Full keyboard navigation (Arrow Down, Arrow Up, Enter, Escape).
+   - Seamless two-way integration with Livewire DOM morphs and form submissions via MutationObserver.
+
+7. **Production-Clean UI & Dashboard Host Type Breakdown**
+   - Removed all development/stage information (DB driver tag, timezone pill, safety status banners, version tags, dev accounts header).
+   - Executive Dashboard Host Type Allocation Breakdown: cards for each active Host Type displaying real-time assigned host count, percentage share, description, and direct drill-down links to `/ip-addresses?host_type={slug}`.
+
 ---
 
 ## Verification Summary
 
 | Component | Status | Verification Detail |
 |---|---|---|
-| **Automated Unit & Feature Tests** | **PASSED (95/95)** | PHPUnit suite with 333 assertions across models, actions, services, and Livewire components |
+| **Automated Unit & Feature Tests** | **PASSED (98/98)** | PHPUnit suite with 350 assertions across models, actions, services, and Livewire components |
 | **Database Schema** | **MIGRATED & SEEDED** | Core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses`, `host_type` additions, `host_types` table |
-| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 218ms |
+| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 181ms |
 | **Dev Server (Port 8080)** | **RUNNING** | Active and responsive on `http://127.0.0.1:8080` (Daemon task) |
 | **Authentication & RBAC** | **VERIFIED** | SuperAdmin, NetworkAdmin, Operator, ReadOnly with full audit event logging |
 
 ---
 
-## Active Test Inventory (95 Tests)
+## Active Test Inventory (98 Tests)
 
 1. `AuthenticationTest`: 3 tests (login screen, user login, logout).
-2. `EnterpriseShellTest`: 3 tests (layout render, navigation links including campuses & host types, guest redirect).
+2. `EnterpriseShellTest`: 4 tests (layout render, navigation links including campuses & host types, guest redirect, searchable select component rendering with autofocus).
 3. `AuditLogTest`: 3 tests (record event, capture IP/agent, polymorphic relation).
 4. `UserRoleTest`: 4 tests (superadmin, networkadmin, operator, readonly).
-5. `SafetyFlagsTest`: 2 tests (discovery disabled, external writes disabled).
+5. `SafetyFlagsTest`: 2 tests (discovery disabled, external writes disabled, app shell operational status).
 6. `SiteManagementTest`: 8 tests (create site, duplicate code validation, update, delete guard, empty delete, child subnet site inheritance, Livewire CRUD, top-bar campus switcher session setting).
 7. `IpAddressTest`: 12 tests (IPv4/IPv6 parsing, hex conversion, normalization).
 8. `IpPrefixTest`: 10 tests (CIDR parsing, network/broadcast calculation, host count).
@@ -96,3 +107,4 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 13. `IpCandidateWindowTest`: 4 tests (virtual candidate pagination, status flags).
 14. `LivewireIpExplorerTest`: 5 tests (Livewire explorer rendering, direct IP allocation, query parameter subnet redirection, subnet mask & default gateway rendering, host type assignment & unquarantining).
 15. `HostTypeManagementTest`: 10 tests (list seeded types, create type, auto slug generation, duplicate slug validation, update type, system slug protection, delete guard for active IPs, toggle status, system type delete guard, Livewire CRUD component).
+16. `DashboardTest`: 2 tests (dashboard host type breakdown with assigned quantities, verification that development stage indicators are removed from UI).

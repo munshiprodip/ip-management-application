@@ -3,9 +3,6 @@
     <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-mono">
-                    STREAMLINED IPAM CORE
-                </span>
                 <span class="text-xs text-slate-500 font-mono">KYAMCH Network Operations Center</span>
             </div>
             <h1 class="text-xl font-bold text-slate-900 dark:text-white mt-1">Network &amp; IP Address Management</h1>
@@ -15,11 +12,8 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 font-mono text-slate-700 dark:text-slate-300">
+            <span class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 font-medium text-slate-700 dark:text-slate-300">
                 Operator: <strong>{{ auth()->user()->name }}</strong> ({{ auth()->user()->role?->value ?? 'viewer' }})
-            </span>
-            <span class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 font-mono text-slate-700 dark:text-slate-300">
-                Timezone: {{ $defaultTimezone }}
             </span>
         </div>
     </div>
@@ -70,6 +64,87 @@
                 <span class="text-amber-600">Reserved: {{ $reservedIpCount }}</span>
                 <span class="text-purple-600">Quarantined: {{ $quarantinedIpCount }}</span>
             </div>
+        </div>
+    </div>
+
+    <!-- Host Type Allocations Breakdown -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-200 dark:border-slate-700">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-white">Host Type Allocations</h2>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                        {{ $assignedIpCount }} TOTAL ASSIGNED
+                    </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Assigned IP address quantities categorized by hospital and network equipment class</p>
+            </div>
+            <a href="{{ route('host-types.index') }}" class="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium inline-flex items-center gap-1">
+                <span>Manage Host Types</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4">
+            @forelse($hostTypeStats as $ht)
+                <div class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-900/40 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-600 transition">
+                    <div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-medium {{ $ht['badgeClasses'] }}">
+                                {{ $ht['name'] }}
+                            </span>
+                            <span class="text-[11px] font-mono text-slate-400">
+                                {{ $ht['percentage'] }}%
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1" title="{{ $ht['description'] }}">
+                            {{ $ht['description'] }}
+                        </p>
+                    </div>
+
+                    <div class="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/50 flex items-end justify-between">
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-mono block text-[10px]">Assigned Hosts</span>
+                            <span class="text-2xl font-bold font-mono text-slate-900 dark:text-white leading-tight">
+                                {{ number_format($ht['assignedCount']) }}
+                            </span>
+                        </div>
+                        <a href="{{ route('ip-addresses.index', ['host_type' => $ht['slug']]) }}" class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium inline-flex items-center gap-0.5">
+                            <span>Explore</span>
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                </div>
+            @empty
+                <div class="col-span-4 py-6 text-center text-xs text-slate-400">
+                    No active host types defined. Configure host types in Administration.
+                </div>
+            @endforelse
+
+            @if($unclassifiedAssignedCount > 0)
+                <div class="p-3.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/20 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                Unclassified
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">General unclassified assignments</p>
+                    </div>
+                    <div class="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-700/50 flex items-end justify-between">
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-mono block text-[10px]">Assigned Hosts</span>
+                            <span class="text-2xl font-bold font-mono text-slate-800 dark:text-slate-200 leading-tight">
+                                {{ number_format($unclassifiedAssignedCount) }}
+                            </span>
+                        </div>
+                        <a href="{{ route('ip-addresses.index', ['host_type' => 'unspecified']) }}" class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-medium inline-flex items-center gap-0.5">
+                            <span>Explore</span>
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 

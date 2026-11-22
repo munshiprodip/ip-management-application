@@ -70,4 +70,18 @@ class EnterpriseShellTest extends TestCase
             $response->assertStatus(200);
         }
     }
+
+    public function test_searchable_select_component_is_rendered_for_dropdowns(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::SUPER_ADMIN,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('ip-addresses.index'));
+        $response->assertStatus(200);
+        $response->assertSee('searchableSelect');
+        $response->assertSee('x-ref="searchInput"', false);
+        $response->assertSee('autofocus');
+    }
 }

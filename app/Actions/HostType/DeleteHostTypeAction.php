@@ -43,3 +43,4 @@ class DeleteHostTypeAction
         return true;
     }
 }
+

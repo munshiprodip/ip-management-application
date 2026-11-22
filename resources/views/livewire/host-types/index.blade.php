@@ -65,14 +65,20 @@
             </div>
 
             <div>
-                <select
-                    wire:model.live="statusFilter"
-                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="All Statuses"
+                    searchPlaceholder="Search status..."
+                    containerClass="min-w-[150px]"
                 >
-                    <option value="all">All Statuses</option>
-                    <option value="active">Active Only</option>
-                    <option value="inactive">Inactive Only</option>
-                </select>
+                    <select
+                        wire:model.live="statusFilter"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                    </select>
+                </x-searchable-select>
             </div>
         </div>
 
@@ -222,14 +228,19 @@
 
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Badge Color *</label>
-                            <select
-                                wire:model="color"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                            <x-searchable-select 
+                                placeholder="Select Badge Color..."
+                                searchPlaceholder="Search color..."
                             >
-                                @foreach($colorOptions as $cKey => $cLabel)
-                                    <option value="{{ $cKey }}">{{ $cLabel }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="color"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                                >
+                                    @foreach($colorOptions as $cKey => $cLabel)
+                                        <option value="{{ $cKey }}">{{ $cLabel }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                             @error('color') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
                     </div>
@@ -318,3 +329,4 @@
         </div>
     @endif
 </div>
+

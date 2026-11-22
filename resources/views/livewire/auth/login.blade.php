@@ -74,9 +74,9 @@
         </button>
     </form>
 
-    <!-- Development Role Helper Buttons -->
+    <!-- Quick Access Role Helper Buttons -->
     <div class="mt-6 pt-5 border-t border-slate-800">
-        <p class="text-[11px] text-slate-400 font-mono mb-2 text-center">Quick Select (Development Accounts):</p>
+        <p class="text-[11px] text-slate-400 font-mono mb-2 text-center">Quick Select Role:</p>
         <div class="grid grid-cols-3 gap-1.5 text-[10px]">
             <button wire:click="fillAccount('admin')" type="button" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition text-center truncate">
                 Super Admin

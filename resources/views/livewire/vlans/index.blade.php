@@ -38,39 +38,57 @@
 
         <div class="flex flex-wrap items-center gap-2.5 text-xs">
             <div>
-                <select
-                    wire:model.live="siteFilter"
-                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="All Campuses"
+                    searchPlaceholder="Search campus..."
+                    containerClass="min-w-[170px]"
                 >
-                    <option value="">All Campuses</option>
-                    @foreach($sites as $site)
-                        <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
-                    @endforeach
-                </select>
+                    <select
+                        wire:model.live="siteFilter"
+                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                    >
+                        <option value="">All Campuses</option>
+                        @foreach($sites as $site)
+                            <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
+                        @endforeach
+                    </select>
+                </x-searchable-select>
             </div>
 
             <div>
-                <select
-                    wire:model.live="zoneFilter"
-                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 font-mono"
+                <x-searchable-select 
+                    placeholder="All Security Zones"
+                    searchPlaceholder="Search security zone..."
+                    containerClass="min-w-[170px]"
                 >
-                    <option value="all">All Security Zones</option>
-                    @foreach($securityZones as $zone)
-                        <option value="{{ $zone->value }}">{{ $zone->label() }}</option>
-                    @endforeach
-                </select>
+                    <select
+                        wire:model.live="zoneFilter"
+                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                    >
+                        <option value="all">All Security Zones</option>
+                        @foreach($securityZones as $zone)
+                            <option value="{{ $zone->value }}">{{ $zone->label() }}</option>
+                        @endforeach
+                    </select>
+                </x-searchable-select>
             </div>
 
             <div>
-                <select
-                    wire:model.live="statusFilter"
-                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="All Statuses"
+                    searchPlaceholder="Search status..."
+                    containerClass="min-w-[140px]"
                 >
-                    <option value="all">All Statuses</option>
-                    @foreach($vlanStatuses as $status)
-                        <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                    @endforeach
-                </select>
+                    <select
+                        wire:model.live="statusFilter"
+                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    >
+                        <option value="all">All Statuses</option>
+                        @foreach($vlanStatuses as $status)
+                            <option value="{{ $status->value }}">{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </x-searchable-select>
             </div>
         </div>
     </div>
@@ -190,15 +208,20 @@
                 <form wire:submit="saveVlan" class="space-y-4 text-xs">
                     <div>
                         <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Campus / Facility Site</label>
-                        <select
-                            wire:model="vlan_site_id"
-                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-emerald-500"
+                        <x-searchable-select 
+                            placeholder="Global / Shared across Campuses"
+                            searchPlaceholder="Search campus or site..."
                         >
-                            <option value="">Global / Shared across Campuses</option>
-                            @foreach($sites as $site)
-                                <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
-                            @endforeach
-                        </select>
+                            <select
+                                wire:model="vlan_site_id"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                            >
+                                <option value="">Global / Shared across Campuses</option>
+                                @foreach($sites as $site)
+                                    <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
+                                @endforeach
+                            </select>
+                        </x-searchable-select>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
@@ -217,14 +240,19 @@
 
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Security Zone *</label>
-                            <select
-                                wire:model="vlan_security_zone"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            <x-searchable-select 
+                                placeholder="Select Security Zone..."
+                                searchPlaceholder="Search security zone..."
                             >
-                                @foreach($securityZones as $zone)
-                                    <option value="{{ $zone->value }}">{{ $zone->label() }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="vlan_security_zone"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                                >
+                                    @foreach($securityZones as $zone)
+                                        <option value="{{ $zone->value }}">{{ $zone->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
                     </div>
 
@@ -242,14 +270,19 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Status *</label>
-                            <select
-                                wire:model="vlan_status"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            <x-searchable-select 
+                                placeholder="Active"
+                                searchPlaceholder="Search status..."
                             >
-                                @foreach($vlanStatuses as $status)
-                                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="vlan_status"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                                >
+                                    @foreach($vlanStatuses as $status)
+                                        <option value="{{ $status->value }}">{{ $status->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
 
                         <div class="flex items-center pt-5">

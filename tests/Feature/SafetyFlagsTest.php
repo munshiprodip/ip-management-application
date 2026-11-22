@@ -44,7 +44,6 @@ class SafetyFlagsTest extends TestCase
 
         $response = $this->actingAs($user)->get('/dashboard');
         $response->assertStatus(200);
-        $response->assertSee('SAFE / OFF');
-        $response->assertSee('LOCKED');
+        $response->assertSee('Operational');
     }
 }

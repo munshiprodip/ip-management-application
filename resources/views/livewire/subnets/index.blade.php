@@ -118,38 +118,56 @@
 
         <div class="flex flex-wrap items-center gap-2.5 text-xs">
             <div>
-                <select
-                    wire:model.live="siteFilter"
-                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="All Campuses"
+                    searchPlaceholder="Search campus..."
+                    containerClass="min-w-[170px]"
                 >
-                    <option value="">All Campuses</option>
-                    @foreach($sites as $site)
-                        <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
-                    @endforeach
-                </select>
+                    <select
+                        wire:model.live="siteFilter"
+                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                    >
+                        <option value="">All Campuses</option>
+                        @foreach($sites as $site)
+                            <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
+                        @endforeach
+                    </select>
+                </x-searchable-select>
             </div>
 
             <div>
-                <select
-                    wire:model.live="familyFilter"
-                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 font-mono"
+                <x-searchable-select 
+                    placeholder="All Families"
+                    searchPlaceholder="Search family..."
+                    containerClass="min-w-[130px]"
                 >
-                    <option value="all">All Families</option>
-                    <option value="4">IPv4 Only</option>
-                    <option value="6">IPv6 Only</option>
-                </select>
+                    <select
+                        wire:model.live="familyFilter"
+                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                    >
+                        <option value="all">All Families</option>
+                        <option value="4">IPv4 Only</option>
+                        <option value="6">IPv6 Only</option>
+                    </select>
+                </x-searchable-select>
             </div>
 
             <div>
-                <select
-                    wire:model.live="typeFilter"
-                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                <x-searchable-select 
+                    placeholder="All Subnet Types"
+                    searchPlaceholder="Search subnet type..."
+                    containerClass="min-w-[180px]"
                 >
-                    <option value="all">All Subnet Types</option>
-                    @foreach($subnetTypes as $type)
-                        <option value="{{ $type->value }}">{{ $type->label() }}</option>
-                    @endforeach
-                </select>
+                    <select
+                        wire:model.live="typeFilter"
+                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                    >
+                        <option value="all">All Subnet Types</option>
+                        @foreach($subnetTypes as $type)
+                            <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                        @endforeach
+                    </select>
+                </x-searchable-select>
             </div>
         </div>
     </div>
@@ -208,27 +226,37 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Parent Subnet</label>
-                            <select
-                                wire:model.live="subnet_parent_id"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                            <x-searchable-select 
+                                placeholder="None (Top-Level Container)"
+                                searchPlaceholder="Search parent prefix or name..."
                             >
-                                <option value="">None (Top-Level Container)</option>
-                                @foreach($parentCandidates as $parent)
-                                    <option value="{{ $parent->id }}">{{ $parent->cidr }} ({{ $parent->name }})</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model.live="subnet_parent_id"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                                >
+                                    <option value="">None (Top-Level Container)</option>
+                                    @foreach($parentCandidates as $parent)
+                                        <option value="{{ $parent->id }}">{{ $parent->cidr }} ({{ $parent->name }})</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
 
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Subnet Type *</label>
-                            <select
-                                wire:model="subnet_type"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            <x-searchable-select 
+                                placeholder="Select Subnet Type..."
+                                searchPlaceholder="Search subnet type..."
                             >
-                                @foreach($subnetTypes as $type)
-                                    <option value="{{ $type->value }}">{{ $type->label() }}</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="subnet_type"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                                >
+                                    @foreach($subnetTypes as $type)
+                                        <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
                     </div>
 
@@ -271,43 +299,58 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Campus / Facility Site</label>
-                            <select
-                                wire:model="subnet_site_id"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-emerald-500"
+                            <x-searchable-select 
+                                placeholder="Global / Unassigned"
+                                searchPlaceholder="Search campus or site..."
                             >
-                                <option value="">Global / Unassigned</option>
-                                @foreach($sites as $site)
-                                    <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="subnet_site_id"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                                >
+                                    <option value="">Global / Unassigned</option>
+                                    @foreach($sites as $site)
+                                        <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
 
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Attached VLAN</label>
-                            <select
-                                wire:model="subnet_vlan_id"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                            <x-searchable-select 
+                                placeholder="None (Unattached)"
+                                searchPlaceholder="Search VLAN ID or name..."
                             >
-                                <option value="">None (Unattached)</option>
-                                @foreach($vlans as $vlan)
-                                    <option value="{{ $vlan->id }}">VLAN {{ $vlan->vlan_id }} ({{ $vlan->name }})</option>
-                                @endforeach
-                            </select>
+                                <select
+                                    wire:model="subnet_vlan_id"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                                >
+                                    <option value="">None (Unattached)</option>
+                                    @foreach($vlans as $vlan)
+                                        <option value="{{ $vlan->id }}">VLAN {{ $vlan->vlan_id }} ({{ $vlan->name }})</option>
+                                    @endforeach
+                                </select>
+                            </x-searchable-select>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Lifecycle Status *</label>
-                            <select
-                                wire:model="subnet_status"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            <x-searchable-select 
+                                placeholder="Active"
+                                searchPlaceholder="Search lifecycle status..."
                             >
-                                <option value="active">Active</option>
-                                <option value="planned">Planned</option>
-                                <option value="deprecated">Deprecated</option>
-                                <option value="retired">Retired</option>
-                            </select>
+                                <select
+                                    wire:model="subnet_status"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="planned">Planned</option>
+                                    <option value="deprecated">Deprecated</option>
+                                    <option value="retired">Retired</option>
+                                </select>
+                            </x-searchable-select>
                         </div>
 
                         <div>

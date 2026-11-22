@@ -37,14 +37,20 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <select
-                wire:model.live="statusFilter"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-emerald-500"
+            <x-searchable-select 
+                placeholder="All Statuses"
+                searchPlaceholder="Search site status..."
+                containerClass="min-w-[150px]"
             >
-                <option value="all">All Statuses</option>
-                <option value="active">Active Only</option>
-                <option value="inactive">Inactive Only</option>
-            </select>
+                <select
+                    wire:model.live="statusFilter"
+                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                >
+                    <option value="all">All Statuses</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                </select>
+            </x-searchable-select>
         </div>
     </div>
 
@@ -182,13 +188,18 @@
 
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Status *</label>
-                            <select
-                                wire:model="status"
-                                class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                            <x-searchable-select 
+                                placeholder="Active"
+                                searchPlaceholder="Search status..."
                             >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
+                                <select
+                                    wire:model="status"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </x-searchable-select>
                         </div>
                     </div>
 

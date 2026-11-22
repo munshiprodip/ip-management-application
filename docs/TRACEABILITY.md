@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Version 2.4.0 Core Architecture with Top-Level Campus Segregation & Host Types Management Delivered  
+> **Status:** Version 2.5.0 Core Architecture with Searchable Selects, Dashboard Breakdown & Clean Production UI  
 > **Updated:** 2026-11-22  
 
 This matrix maps core functional requirements and active modules of the streamlined KYAMCH Smart IPAM application to database tables, domain services, Livewire UI components, and automated test coverage.
@@ -12,7 +12,7 @@ This matrix maps core functional requirements and active modules of the streamli
 
 | Module ID | Module Name | Core Entities / Tables | UI Components / Routes | Domain Services / Actions | Automated Tests | Architecture Status |
 |---|---|---|---|---|---|---|
-| **M00** | **Baseline & Enterprise Shell** | `users`, `audit_events`, `sessions` | `/login`, `/dashboard`, `AppLayout` | `AuditEvent::record()`, Auth Guards | `AuthenticationTest`, `EnterpriseShellTest`, `SafetyFlagsTest`, `AuditLogTest`, `UserRoleTest` | **ACTIVE** |
+| **M00** | **Baseline & Enterprise Shell** | `users`, `audit_events`, `sessions` | `/login`, `/dashboard`, `AppLayout`, `SearchableSelect` | `AuditEvent::record()`, Auth Guards, `searchableSelect` Alpine component | `AuthenticationTest`, `EnterpriseShellTest`, `SafetyFlagsTest`, `AuditLogTest`, `UserRoleTest`, `DashboardTest` | **ACTIVE** |
 | **M01** | **Top-Level Campus / Site Segregation** | `sites` | Top Bar Switcher, `/sites`, `Sites\Index`, `Components\CampusSwitcher` | `SiteContext`, `CreateSiteAction`, `UpdateSiteAction`, `DeleteSiteAction` | `SiteManagementTest` | **ACTIVE** |
 | **M02** | **802.1Q VLAN Management** | `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction` | `VlanManagementTest` | **ACTIVE** |
 | **M03** | **Subnets & CIDR Hierarchy** | `subnets` | `/subnets`, `Subnets\Index`, `_subnet-row` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `CreateSubnetAction`, `UpdateSubnetAction`, `DeleteSubnetAction` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` | **ACTIVE** |

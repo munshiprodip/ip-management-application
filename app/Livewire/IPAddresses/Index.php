@@ -33,6 +33,7 @@ class Index extends Component
     public int $currentPage = 1;
     public int $perPage = 50;
     public string $statusFilter = 'all'; // 'all', 'unassigned', 'assigned', 'reserved', 'quarantined'
+    #[Url(as: 'host_type')]
     public string $hostTypeFilter = 'all';
     public string $search = '';
 

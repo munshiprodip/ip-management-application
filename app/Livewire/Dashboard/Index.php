@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Dashboard;
 
 use App\Models\AuditEvent;
+use App\Models\HostType;
 use App\Models\IpAddress;
 use App\Models\Subnet;
 use App\Models\Vlan;
@@ -49,6 +50,39 @@ class Index extends Component
         $reservedIpCount = (clone $ipQuery)->where('allocation_status', 'reserved')->count();
         $quarantinedIpCount = (clone $ipQuery)->where('allocation_status', 'quarantined')->count();
 
+        // Host Type Classification Statistics (Assigned Quantities)
+        $hostTypes = HostType::where('is_active', true)->orderBy('name')->get();
+        $assignedIpByHostType = (clone $ipQuery)
+            ->where('allocation_status', 'assigned')
+            ->whereNotNull('host_type')
+            ->selectRaw('host_type, count(*) as total_count')
+            ->groupBy('host_type')
+            ->pluck('total_count', 'host_type')
+            ->all();
+
+        $unclassifiedAssignedCount = (clone $ipQuery)
+            ->where('allocation_status', 'assigned')
+            ->where(function ($q) {
+                $q->whereNull('host_type')->orWhere('host_type', '');
+            })
+            ->count();
+
+        $hostTypeStats = $hostTypes->map(function (HostType $ht) use ($assignedIpByHostType, $assignedIpCount) {
+            $count = (int) ($assignedIpByHostType[$ht->slug] ?? 0);
+            $percentage = $assignedIpCount > 0 ? round(($count / $assignedIpCount) * 100, 1) : 0.0;
+
+            return [
+                'id' => $ht->id,
+                'name' => $ht->name,
+                'slug' => $ht->slug,
+                'description' => $ht->description,
+                'color' => $ht->color,
+                'badgeClasses' => $ht->badgeClasses(),
+                'assignedCount' => $count,
+                'percentage' => $percentage,
+            ];
+        });
+
         // Subnet Capacity Watchlist (Top 5 utilized subnets)
         $subnets = (clone $subnetQuery)->with('vlan')->take(50)->get();
         $capacityWatchlist = $subnets->map(function ($subnet) {
@@ -76,6 +110,8 @@ class Index extends Component
             'assignedIpCount' => $assignedIpCount,
             'reservedIpCount' => $reservedIpCount,
             'quarantinedIpCount' => $quarantinedIpCount,
+            'hostTypeStats' => $hostTypeStats,
+            'unclassifiedAssignedCount' => $unclassifiedAssignedCount,
             'capacityWatchlist' => $capacityWatchlist,
             'recentAudits' => $recentAudits,
             'defaultTimezone' => config('ipam.default_timezone', 'Asia/Dhaka'),
