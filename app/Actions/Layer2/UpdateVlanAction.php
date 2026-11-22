@@ -36,6 +36,9 @@ class UpdateVlanAction
 
         return DB::transaction(function () use ($vlan, $data) {
             $before = $vlan->toArray();
+            if (array_key_exists('site_id', $data)) {
+                $data['site_id'] = !empty($data['site_id']) ? (int) $data['site_id'] : null;
+            }
             $vlan->update($data);
             $after = $vlan->fresh()->toArray();
 

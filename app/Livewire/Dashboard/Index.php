@@ -8,6 +8,7 @@ use App\Models\AuditEvent;
 use App\Models\IpAddress;
 use App\Models\Subnet;
 use App\Models\Vlan;
+use App\Services\SiteContext;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -19,19 +20,37 @@ class Index extends Component
 {
     public function render(): View
     {
-        $subnetCount = Subnet::count();
-        $ipv4SubnetCount = Subnet::where('ip_version', 4)->count();
-        $ipv6SubnetCount = Subnet::where('ip_version', 6)->count();
+        $siteContext = app(SiteContext::class);
+        $activeSiteId = $siteContext->getActiveSiteId();
+        $activeSite = $siteContext->getActiveSite();
 
-        $vlanCount = Vlan::count();
+        $subnetQuery = Subnet::query();
+        $vlanQuery = Vlan::query();
+        $ipQuery = IpAddress::query();
 
-        $totalIpCount = IpAddress::count();
-        $assignedIpCount = IpAddress::where('allocation_status', 'assigned')->count();
-        $reservedIpCount = IpAddress::where('allocation_status', 'reserved')->count();
-        $quarantinedIpCount = IpAddress::where('allocation_status', 'quarantined')->count();
+        if ($activeSiteId) {
+            $subnetQuery->where('site_id', $activeSiteId);
+            $vlanQuery->where(function ($q) use ($activeSiteId) {
+                $q->where('site_id', $activeSiteId)->orWhereNull('site_id');
+            });
+            $ipQuery->whereHas('subnet', function ($q) use ($activeSiteId) {
+                $q->where('site_id', $activeSiteId);
+            });
+        }
+
+        $subnetCount = (clone $subnetQuery)->count();
+        $ipv4SubnetCount = (clone $subnetQuery)->where('ip_version', 4)->count();
+        $ipv6SubnetCount = (clone $subnetQuery)->where('ip_version', 6)->count();
+
+        $vlanCount = $vlanQuery->count();
+
+        $totalIpCount = (clone $ipQuery)->count();
+        $assignedIpCount = (clone $ipQuery)->where('allocation_status', 'assigned')->count();
+        $reservedIpCount = (clone $ipQuery)->where('allocation_status', 'reserved')->count();
+        $quarantinedIpCount = (clone $ipQuery)->where('allocation_status', 'quarantined')->count();
 
         // Subnet Capacity Watchlist (Top 5 utilized subnets)
-        $subnets = Subnet::with('vlan')->take(50)->get();
+        $subnets = (clone $subnetQuery)->with('vlan')->take(50)->get();
         $capacityWatchlist = $subnets->map(function ($subnet) {
             $total = (int) (string) $subnet->totalAddresses();
             $allocated = $subnet->allocatedCount();
@@ -48,6 +67,7 @@ class Index extends Component
         $recentAudits = AuditEvent::recent(6)->get();
 
         return view('livewire.dashboard.index', [
+            'activeSite' => $activeSite,
             'subnetCount' => $subnetCount,
             'ipv4SubnetCount' => $ipv4SubnetCount,
             'ipv6SubnetCount' => $ipv6SubnetCount,

@@ -26,11 +26,20 @@ class CreateSubnetAction
         $prefix = IpPrefix::parse($data['cidr']);
         $canonicalCidr = $prefix->cidr();
         $parentId = !empty($data['parent_id']) ? (int) $data['parent_id'] : null;
+        $siteId = !empty($data['site_id']) ? (int) $data['site_id'] : null;
+
+        if ($siteId === null && $parentId !== null) {
+            $parent = Subnet::find($parentId);
+            if ($parent && $parent->site_id) {
+                $siteId = $parent->site_id;
+            }
+        }
 
         $this->hierarchyService->validateHierarchy($prefix, $parentId);
 
-        return DB::transaction(function () use ($data, $prefix, $canonicalCidr, $parentId) {
+        return DB::transaction(function () use ($data, $prefix, $canonicalCidr, $parentId, $siteId) {
             $subnet = Subnet::create([
+                'site_id' => $siteId,
                 'parent_id' => $parentId,
                 'vlan_id' => !empty($data['vlan_id']) ? (int) $data['vlan_id'] : null,
                 'name' => trim($data['name']),

@@ -22,6 +22,7 @@ class Subnet extends Model
     protected $table = 'subnets';
 
     protected $fillable = [
+        'site_id',
         'parent_id',
         'vlan_id',
         'name',
@@ -46,6 +47,11 @@ class Subnet extends Model
             'status' => SubnetStatus::class,
             'allocation_enabled' => 'boolean',
         ];
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function parent(): BelongsTo

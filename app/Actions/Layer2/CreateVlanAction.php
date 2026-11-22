@@ -34,6 +34,7 @@ class CreateVlanAction
 
         return DB::transaction(function () use ($data, $vlanId) {
             $vlan = Vlan::create([
+                'site_id' => !empty($data['site_id']) ? (int) $data['site_id'] : null,
                 'vlan_id' => $vlanId,
                 'name' => trim($data['name']),
                 'description' => $data['description'] ?? null,

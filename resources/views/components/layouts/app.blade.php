@@ -80,6 +80,13 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <span>IP Explorer & Allocations</span>
             </a>
+
+            <div class="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Administration</div>
+
+            <a href="{{ route('sites.index') }}" class="flex items-center gap-3 px-3 py-2 rounded-md font-medium transition {{ request()->routeIs('sites.*') ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                <span>Campuses &amp; Sites</span>
+            </a>
         </nav>
 
         <!-- Current Operator Profile & Logout -->
@@ -105,14 +112,18 @@
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100 dark:bg-slate-900">
         <!-- Top App Bar -->
-        <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3.5 flex items-center justify-between shadow-xs z-10">
-            <div class="flex items-center gap-3">
+        <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 flex items-center justify-between shadow-xs z-10">
+            <div class="flex items-center gap-4 flex-wrap">
                 <h2 class="text-base font-semibold text-slate-900 dark:text-white leading-tight">
                     {{ $header ?? 'KYAMCH Smart IPAM Operations' }}
                 </h2>
                 <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono">
                     {{ config('ipam.system_code') }} v1.0.0
                 </span>
+
+                <!-- Top Global Campus Switcher -->
+                <div class="h-4 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
+                @livewire('components.campus-switcher')
             </div>
 
             <!-- Context Status Pills -->

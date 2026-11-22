@@ -12,6 +12,7 @@ return new class extends Migration
     {
         Schema::create('subnets', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('site_id')->nullable()->constrained('sites')->nullOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('subnets')->nullOnDelete();
             $table->foreignId('vlan_id')->nullable()->constrained('vlans')->nullOnDelete();
             $table->string('name', 120);
@@ -36,4 +37,3 @@ return new class extends Migration
         Schema::dropIfExists('subnets');
     }
 };
-

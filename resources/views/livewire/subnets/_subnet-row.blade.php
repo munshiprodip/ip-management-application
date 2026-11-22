@@ -39,8 +39,13 @@
         </div>
     </td>
     <td class="py-3 px-4">
-        <div class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+        <div class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
             <span>{{ $subnet->name }}</span>
+            @if($subnet->site)
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800" title="Campus: {{ $subnet->site->name }}">
+                    {{ $subnet->site->code }}
+                </span>
+            @endif
             @if($depth > 0)
                 <span class="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 font-mono">
                     Level {{ $depth }} Child
@@ -150,3 +155,4 @@
         ])
     @endforeach
 @endif
+

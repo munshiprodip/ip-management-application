@@ -119,6 +119,18 @@
         <div class="flex flex-wrap items-center gap-2.5 text-xs">
             <div>
                 <select
+                    wire:model.live="siteFilter"
+                    class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-emerald-500"
+                >
+                    <option value="">All Campuses</option>
+                    @foreach($sites as $site)
+                        <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <select
                     wire:model.live="familyFilter"
                     class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 font-mono"
                 >
@@ -258,6 +270,19 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Campus / Facility Site</label>
+                            <select
+                                wire:model="subnet_site_id"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-emerald-500"
+                            >
+                                <option value="">Global / Unassigned</option>
+                                @foreach($sites as $site)
+                                    <option value="{{ $site->id }}">{{ $site->name }} ({{ $site->code }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Attached VLAN</label>
                             <select
                                 wire:model="subnet_vlan_id"
@@ -269,7 +294,9 @@
                                 @endforeach
                             </select>
                         </div>
+                    </div>
 
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Lifecycle Status *</label>
                             <select
@@ -281,6 +308,16 @@
                                 <option value="deprecated">Deprecated</option>
                                 <option value="retired">Retired</option>
                             </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Allocation Policy</label>
+                            <div class="flex items-center h-9">
+                                <label class="inline-flex items-center gap-2 cursor-pointer text-xs">
+                                    <input type="checkbox" wire:model="subnet_allocation_enabled" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                    <span>Enable IP Allocations</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 

@@ -10,10 +10,12 @@ use App\Actions\AddressSpace\UpdateSubnetAction;
 use App\Domain\AddressSpace\Enums\SubnetStatus;
 use App\Domain\AddressSpace\Enums\SubnetType;
 use App\Domain\AddressSpace\ValueObjects\IpPrefix;
+use App\Models\Site;
 use App\Models\Subnet;
 use App\Models\Vlan;
 use App\Services\AddressSpace\SubnetHierarchyService;
 use App\Services\IPMath\IpCalculatorService;
+use App\Services\SiteContext;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -35,6 +37,7 @@ class Index extends Component
     public string $search = '';
     public string $familyFilter = 'all';
     public string $typeFilter = 'all';
+    public ?int $siteFilter = null;
 
     // Create / Edit modal state
     public bool $showSubnetModal = false;
@@ -42,6 +45,7 @@ class Index extends Component
     public ?int $selectedSubnetId = null;
 
     // Form inputs
+    public ?int $subnet_site_id = null;
     public ?int $subnet_parent_id = null;
     public ?int $subnet_vlan_id = null;
     public string $subnet_name = '';
@@ -82,6 +86,16 @@ class Index extends Component
         $this->resetPage();
     }
 
+    public function updatingSiteFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function mount(SiteContext $context): void
+    {
+        $this->siteFilter = $context->getActiveSiteId();
+    }
+
     public function drillDown(?int $parentId): void
     {
         $this->selectedParentId = $parentId;
@@ -111,12 +125,19 @@ class Index extends Component
     {
         $this->isEditing = false;
         $this->selectedSubnetId = null;
-        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_description', 'subnet_vlan_id']);
+        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_description', 'subnet_vlan_id', 'subnet_site_id']);
 
         $this->subnet_parent_id = $parentId ?? $this->selectedParentId;
         $this->subnet_type = ($parentId !== null) ? 'assignable' : 'aggregate';
         $this->subnet_status = 'active';
         $this->subnet_allocation_enabled = true;
+
+        if ($this->subnet_parent_id) {
+            $parent = Subnet::find($this->subnet_parent_id);
+            $this->subnet_site_id = $parent?->site_id ?? $this->siteFilter;
+        } else {
+            $this->subnet_site_id = $this->siteFilter ?? app(SiteContext::class)->getActiveSiteId();
+        }
 
         $this->showSubnetModal = true;
     }
@@ -127,6 +148,7 @@ class Index extends Component
 
         $this->isEditing = true;
         $this->selectedSubnetId = $subnet->id;
+        $this->subnet_site_id = $subnet->site_id;
         $this->subnet_parent_id = $subnet->parent_id;
         $this->subnet_vlan_id = $subnet->vlan_id;
         $this->subnet_name = $subnet->name;
@@ -155,6 +177,7 @@ class Index extends Component
                 $subnet = Subnet::findOrFail($this->selectedSubnetId);
 
                 $updateAction->execute($subnet, [
+                    'site_id' => $this->subnet_site_id,
                     'name' => $this->subnet_name,
                     'parent_id' => $this->subnet_parent_id,
                     'vlan_id' => $this->subnet_vlan_id,
@@ -167,6 +190,7 @@ class Index extends Component
                 session()->flash('success', "Subnet '{$subnet->cidr}' updated successfully.");
             } else {
                 $createAction->execute([
+                    'site_id' => $this->subnet_site_id,
                     'parent_id' => $this->subnet_parent_id,
                     'vlan_id' => $this->subnet_vlan_id,
                     'name' => $this->subnet_name,
@@ -285,8 +309,13 @@ class Index extends Component
     public function render()
     {
         $vlans = Vlan::orderBy('vlan_id')->get();
+        $sites = Site::where('status', 'active')->orderBy('name')->get();
 
-        $query = Subnet::with('vlan')->withCount('children');
+        $query = Subnet::with(['vlan', 'site'])->withCount('children');
+
+        if ($this->siteFilter) {
+            $query->where('site_id', $this->siteFilter);
+        }
 
         if ($this->familyFilter !== 'all') {
             $query->where('ip_version', (int) $this->familyFilter);
@@ -329,6 +358,7 @@ class Index extends Component
             'subnets' => $subnets,
             'childrenByParent' => $childrenByParent,
             'vlans' => $vlans,
+            'sites' => $sites,
             'selectedParent' => $selectedParent,
             'parentCandidates' => $parentCandidates,
             'subnetTypes' => SubnetType::cases(),

@@ -14,6 +14,7 @@ use App\Models\IpAddress;
 use App\Models\Subnet;
 use App\Services\AddressSpace\CandidateWindowGenerator;
 use App\Services\AddressSpace\IpAllocationService;
+use App\Services\SiteContext;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -56,11 +57,26 @@ class Index extends Component
     public bool $showDetailsDrawer = false;
     public ?int $detailIpId = null;
 
-    public function mount(): void
+    public function mount(SiteContext $siteContext): void
     {
-        $firstSubnet = Subnet::where('subnet_type', 'assignable')
-            ->where('allocation_enabled', true)
-            ->first();
+        $activeSiteId = $siteContext->getActiveSiteId();
+
+        $query = Subnet::where('subnet_type', 'assignable')
+            ->where('allocation_enabled', true);
+
+        if ($activeSiteId) {
+            $query->where('site_id', $activeSiteId);
+        }
+
+        $firstSubnet = $query->first();
+
+        // Fallback to any assignable if no subnet found in active site
+        if (!$firstSubnet && $activeSiteId) {
+            $firstSubnet = Subnet::where('subnet_type', 'assignable')
+                ->where('allocation_enabled', true)
+                ->first();
+        }
+
         $this->selectedSubnetId = $firstSubnet?->id;
     }
 
@@ -202,11 +218,21 @@ class Index extends Component
 
     public function render()
     {
-        $subnets = Subnet::where('subnet_type', 'assignable')
-            ->orderBy('cidr')
-            ->get();
+        $activeSiteId = app(SiteContext::class)->getActiveSiteId();
 
-        $selectedSubnet = $this->selectedSubnetId ? Subnet::with(['vlan', 'pools', 'exclusions'])->find($this->selectedSubnetId) : null;
+        $subnetQuery = Subnet::where('subnet_type', 'assignable')->with('site');
+        if ($activeSiteId) {
+            $subnetQuery->where('site_id', $activeSiteId);
+        }
+
+        $subnets = $subnetQuery->orderBy('cidr')->get();
+
+        // If currently selected subnet is not in the filtered subnets, select first available
+        if ($this->selectedSubnetId && $subnets->isNotEmpty() && !$subnets->contains('id', $this->selectedSubnetId)) {
+            $this->selectedSubnetId = $subnets->first()->id;
+        }
+
+        $selectedSubnet = $this->selectedSubnetId ? Subnet::with(['vlan', 'site', 'pools', 'exclusions'])->find($this->selectedSubnetId) : null;
 
         $windowData = ['items' => [], 'total' => 0, 'per_page' => $this->perPage, 'current_page' => 1, 'last_page' => 1];
 

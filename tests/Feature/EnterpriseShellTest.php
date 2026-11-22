@@ -24,6 +24,9 @@ class EnterpriseShellTest extends TestCase
 
         $response = $this->get('/ip-addresses');
         $response->assertRedirect('/login');
+
+        $response = $this->get('/sites');
+        $response->assertRedirect('/login');
     }
 
     public function test_authenticated_user_can_view_dashboard_and_navigation_shell(): void
@@ -39,11 +42,12 @@ class EnterpriseShellTest extends TestCase
         $response->assertSee('Network & IP Address Management');
         $response->assertSee('KYAMCH IPAM');
 
-        // Check for 4 core navigation links
+        // Check for core navigation links
         $response->assertSee(route('dashboard'));
         $response->assertSee(route('subnets.index'));
         $response->assertSee(route('vlans.index'));
         $response->assertSee(route('ip-addresses.index'));
+        $response->assertSee(route('sites.index'));
     }
 
     public function test_all_streamlined_module_screens_render_cleanly(): void
@@ -58,6 +62,7 @@ class EnterpriseShellTest extends TestCase
             route('subnets.index'),
             route('vlans.index'),
             route('ip-addresses.index'),
+            route('sites.index'),
         ];
 
         foreach ($modules as $url) {

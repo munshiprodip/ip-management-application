@@ -34,10 +34,21 @@ class UpdateSubnetAction
         return DB::transaction(function () use ($subnet, $data, $parentId) {
             $before = $subnet->toArray();
 
-            $subnet->update(array_merge($data, [
+            $updatePayload = array_merge($data, [
                 'parent_id' => $parentId,
                 'vlan_id' => array_key_exists('vlan_id', $data) && !empty($data['vlan_id']) ? (int) $data['vlan_id'] : null,
-            ]));
+            ]);
+
+            if (array_key_exists('site_id', $data)) {
+                $updatePayload['site_id'] = !empty($data['site_id']) ? (int) $data['site_id'] : null;
+            }
+
+            $subnet->update($updatePayload);
+
+            // If site_id changed on parent, cascade to immediate children without a site
+            if (isset($updatePayload['site_id'])) {
+                $subnet->children()->whereNull('site_id')->update(['site_id' => $updatePayload['site_id']]);
+            }
 
             $after = $subnet->fresh()->toArray();
 

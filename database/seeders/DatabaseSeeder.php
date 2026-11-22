@@ -8,6 +8,7 @@ use App\Actions\AddressSpace\AllocateIpAction;
 use App\Actions\AddressSpace\CreateSubnetAction;
 use App\Actions\AddressSpace\ReserveIpAction;
 use App\Actions\Layer2\CreateVlanAction;
+use App\Actions\Site\CreateSiteAction;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\Enums\SubnetType;
 use App\Domain\Layer2\Enums\VlanSecurityZone;
@@ -15,6 +16,7 @@ use App\Domain\Security\Enums\UserRole;
 use App\Models\AuditEvent;
 use App\Models\IpExclusion;
 use App\Models\IpPool;
+use App\Models\Site;
 use App\Models\Subnet;
 use App\Models\User;
 use App\Models\Vlan;
@@ -76,16 +78,52 @@ class DatabaseSeeder extends Seeder
 
         $admin = User::where('email', 'admin@kyamch.local')->first();
 
-        // 2. Seed 802.1Q VLANs
+        // 2. Seed Campus Sites
+        $siteAction = app(CreateSiteAction::class);
+        $campusConfigs = [
+            [
+                'code' => 'KYAMCH-MAIN',
+                'name' => 'KYAMCH Main Hospital Campus',
+                'description' => 'Main hospital facility, inpatient wards, surgical suites, and ICU.',
+                'status' => 'active',
+                'is_default' => true,
+            ],
+            [
+                'code' => 'KYAMCH-ACAD',
+                'name' => 'Academic & Medical College',
+                'description' => 'Medical college classrooms, lecture halls, laboratories, and faculty offices.',
+                'status' => 'active',
+                'is_default' => false,
+            ],
+            [
+                'code' => 'KYAMCH-NURS',
+                'name' => 'Nursing Institute & Hostels',
+                'description' => 'Nursing institute campus, student hostels, and residential quarters.',
+                'status' => 'active',
+                'is_default' => false,
+            ],
+        ];
+
+        foreach ($campusConfigs as $cfg) {
+            if (!Site::where('code', $cfg['code'])->exists()) {
+                $siteAction->execute($cfg);
+            }
+        }
+
+        $mainSite = Site::where('code', 'KYAMCH-MAIN')->first();
+        $acadSite = Site::where('code', 'KYAMCH-ACAD')->first();
+
+        // 3. Seed 802.1Q VLANs
         $vlanAction = app(CreateVlanAction::class);
 
         $vlanConfigs = [
-            ['vlan_id' => 10, 'name' => 'CORE-MANAGEMENT', 'security_zone' => VlanSecurityZone::MANAGEMENT, 'is_restricted' => false, 'description' => 'Out-of-band management and core switch control plane.'],
-            ['vlan_id' => 20, 'name' => 'ICU-CLINICAL-DEVICES', 'security_zone' => VlanSecurityZone::CLINICAL, 'is_restricted' => true, 'description' => 'Clinical patient monitors, ventilators, and bedside telemetry.'],
-            ['vlan_id' => 30, 'name' => 'PACS-RADIOLOGY', 'security_zone' => VlanSecurityZone::PACS, 'is_restricted' => false, 'description' => 'Picture archiving, MRI, CT, and DICOM imaging network.'],
-            ['vlan_id' => 40, 'name' => 'DATACENTER-SERVERS', 'security_zone' => VlanSecurityZone::SERVERS, 'is_restricted' => false, 'description' => 'Hospital ERP, pharmacy, lab informatics, and EHR database cluster.'],
-            ['vlan_id' => 50, 'name' => 'STAFF-WORKSTATIONS', 'security_zone' => VlanSecurityZone::WORKSTATIONS, 'is_restricted' => false, 'description' => 'Nursing stations, doctor consulting desks, and administrative PCs.'],
-            ['vlan_id' => 60, 'name' => 'GUEST-PUBLIC-WIFI', 'security_zone' => VlanSecurityZone::GUEST, 'is_restricted' => false, 'description' => 'Patient waiting area and visitor public wireless network.'],
+            ['site_id' => $mainSite?->id, 'vlan_id' => 10, 'name' => 'CORE-MANAGEMENT', 'security_zone' => VlanSecurityZone::MANAGEMENT, 'is_restricted' => false, 'description' => 'Out-of-band management and core switch control plane.'],
+            ['site_id' => $mainSite?->id, 'vlan_id' => 20, 'name' => 'ICU-CLINICAL-DEVICES', 'security_zone' => VlanSecurityZone::CLINICAL, 'is_restricted' => true, 'description' => 'Clinical patient monitors, ventilators, and bedside telemetry.'],
+            ['site_id' => $mainSite?->id, 'vlan_id' => 30, 'name' => 'PACS-RADIOLOGY', 'security_zone' => VlanSecurityZone::PACS, 'is_restricted' => false, 'description' => 'Picture archiving, MRI, CT, and DICOM imaging network.'],
+            ['site_id' => $mainSite?->id, 'vlan_id' => 40, 'name' => 'DATACENTER-SERVERS', 'security_zone' => VlanSecurityZone::SERVERS, 'is_restricted' => false, 'description' => 'Hospital ERP, pharmacy, lab informatics, and EHR database cluster.'],
+            ['site_id' => $mainSite?->id, 'vlan_id' => 50, 'name' => 'STAFF-WORKSTATIONS', 'security_zone' => VlanSecurityZone::WORKSTATIONS, 'is_restricted' => false, 'description' => 'Nursing stations, doctor consulting desks, and administrative PCs.'],
+            ['site_id' => $mainSite?->id, 'vlan_id' => 60, 'name' => 'GUEST-PUBLIC-WIFI', 'security_zone' => VlanSecurityZone::GUEST, 'is_restricted' => false, 'description' => 'Patient waiting area and visitor public wireless network.'],
+            ['site_id' => $acadSite?->id, 'vlan_id' => 100, 'name' => 'COLLEGE-LABS', 'security_zone' => VlanSecurityZone::INTERNAL, 'is_restricted' => false, 'description' => 'Medical student anatomy, biochemistry and computer labs.'],
         ];
 
         foreach ($vlanConfigs as $cfg) {
@@ -98,13 +136,14 @@ class DatabaseSeeder extends Seeder
         $vlan20 = Vlan::where('vlan_id', 20)->first();
         $vlan30 = Vlan::where('vlan_id', 30)->first();
 
-        // 3. Seed Subnet Hierarchy
+        // 4. Seed Subnet Hierarchy
         $subnetAction = app(CreateSubnetAction::class);
 
         // IPv4 Root Aggregate
         $rootSubnet = Subnet::where('cidr', '10.10.0.0/16')->first();
         if (! $rootSubnet) {
             $rootSubnet = $subnetAction->execute([
+                'site_id' => $mainSite?->id,
                 'name' => 'KYAMCH Campus IPv4 Aggregate',
                 'cidr' => '10.10.0.0/16',
                 'subnet_type' => SubnetType::AGGREGATE,
@@ -159,12 +198,40 @@ class DatabaseSeeder extends Seeder
         $rootIpv6 = Subnet::where('cidr', '2001:db8:1000::/48')->first();
         if (! $rootIpv6) {
             $rootIpv6 = $subnetAction->execute([
+                'site_id' => $mainSite?->id,
                 'name' => 'KYAMCH Enterprise IPv6 Allocation',
                 'cidr' => '2001:db8:1000::/48',
                 'subnet_type' => SubnetType::AGGREGATE,
                 'description' => 'Global IPv6 aggregate space.',
                 'allocation_enabled' => false,
             ]);
+        }
+
+        // Academic Medical College Aggregate & Subnet
+        if ($acadSite) {
+            $acadRoot = Subnet::where('cidr', '10.20.0.0/16')->first();
+            if (! $acadRoot) {
+                $acadRoot = $subnetAction->execute([
+                    'site_id' => $acadSite->id,
+                    'name' => 'KYAMCH Medical College IPv4 Aggregate',
+                    'cidr' => '10.20.0.0/16',
+                    'subnet_type' => SubnetType::AGGREGATE,
+                    'description' => 'Medical college campus academic network container.',
+                    'allocation_enabled' => false,
+                ]);
+
+                $collegeLabVlan = Vlan::where('vlan_id', 100)->first();
+                $subnetAction->execute([
+                    'site_id' => $acadSite->id,
+                    'parent_id' => $acadRoot->id,
+                    'vlan_id' => $collegeLabVlan?->id,
+                    'name' => 'Student Computer & Pathology Lab',
+                    'cidr' => '10.20.10.0/24',
+                    'subnet_type' => SubnetType::ASSIGNABLE,
+                    'description' => 'Academic computing laboratory workstations.',
+                    'allocation_enabled' => true,
+                ]);
+            }
         }
 
         // IPv6 Leaf Subnet

@@ -10,21 +10,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('vlans', function (Blueprint $table) {
+        Schema::create('sites', function (Blueprint $table) {
             $table->id();
-            $table->unsignedSmallInteger('vlan_id')->unique()->comment('802.1Q VLAN Tag (1-4094)');
-            $table->string('name', 100);
+            $table->string('name', 120);
+            $table->string('code', 32)->unique();
             $table->text('description')->nullable();
-            $table->string('security_zone', 32)->default('internal');
             $table->string('status', 24)->default('active')->index();
-            $table->boolean('is_restricted')->default(false);
+            $table->boolean('is_default')->default(false);
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('vlans');
+        Schema::dropIfExists('sites');
     }
 };
-

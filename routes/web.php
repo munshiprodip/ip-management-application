@@ -38,4 +38,5 @@ Route::middleware('auth')->group(function () {
     Route::get('/subnets', SubnetsIndex::class)->name('subnets.index');
     Route::get('/vlans', VlansIndex::class)->name('vlans.index');
     Route::get('/ip-addresses', IPAddressesIndex::class)->name('ip-addresses.index');
+    Route::get('/sites', \App\Livewire\Sites\Index::class)->name('sites.index');
 });

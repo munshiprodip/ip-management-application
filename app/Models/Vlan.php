@@ -9,6 +9,7 @@ use App\Domain\Layer2\Enums\VlanStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Vlan extends Model
@@ -18,6 +19,7 @@ class Vlan extends Model
     protected $table = 'vlans';
 
     protected $fillable = [
+        'site_id',
         'vlan_id',
         'name',
         'description',
@@ -34,6 +36,11 @@ class Vlan extends Model
             'status' => VlanStatus::class,
             'is_restricted' => 'boolean',
         ];
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function subnets(): HasMany

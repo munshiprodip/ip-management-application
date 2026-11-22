@@ -36,7 +36,7 @@
                     class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-semibold focus:ring-2 focus:ring-emerald-500"
                 >
                     @forelse($subnets as $sub)
-                        <option value="{{ $sub->id }}">{{ $sub->cidr }} — {{ $sub->name }}</option>
+                        <option value="{{ $sub->id }}">{{ $sub->cidr }} — {{ $sub->name }}{{ $sub->site ? ' [' . $sub->site->code . ']' : '' }}</option>
                     @empty
                         <option value="">No assignable subnets available</option>
                     @endforelse
