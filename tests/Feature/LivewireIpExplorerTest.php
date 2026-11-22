@@ -119,4 +119,61 @@ class LivewireIpExplorerTest extends TestCase
             'hostname' => 'dr-desk-03.kyamch.local',
         ]);
     }
+
+    public function test_livewire_ip_explorer_manages_host_types_and_unquarantines(): void
+    {
+        $this->actingAs($this->admin);
+
+        // 1. Allocate IP with HostType::MEDICAL
+        $component = Livewire::test(IpAddressesIndex::class)
+            ->set('selectedSubnetId', $this->subnet->id)
+            ->call('openAllocateModal', '10.50.1.30')
+            ->set('alloc_assigned_to', 'ICU Dialysis Station 1')
+            ->set('alloc_hostname', 'dialysis-01.kyamch.local')
+            ->set('alloc_host_type', 'medical')
+            ->call('saveAllocation')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'address_text' => '10.50.1.30',
+            'assigned_to' => 'ICU Dialysis Station 1',
+            'host_type' => 'medical',
+            'allocation_status' => 'assigned',
+        ]);
+
+        // Verify that the table renders the Medical Devices badge
+        $component->assertSee('Medical devices');
+
+        // 2. Release with quarantine
+        $ip = \App\Models\IpAddress::where('address_text', '10.50.1.30')->firstOrFail();
+        $releaseAction = app(\App\Actions\AddressSpace\ReleaseIpAction::class);
+        $releaseAction->execute($ip, 'Device decommissioned', 5, $this->admin);
+
+        // Refresh component to reflect external database change
+        $component->call('$refresh')
+            ->assertSee('Quarantined')
+            ->assertSee('Make Unassigned');
+
+        // 3. Click Make Unassigned
+        $component->call('unquarantineIp', '10.50.1.30')
+            ->assertHasNoErrors();
+
+        $freshIp = $ip->fresh();
+        $this->assertEquals(\App\Domain\AddressSpace\Enums\IpAllocationStatus::UNASSIGNED, $freshIp->allocation_status);
+        $this->assertNull($freshIp->quarantined_until);
+        $this->assertNull($freshIp->assigned_to);
+
+        // 4. Update Host Type on another IP via Edit Modal
+        $component->call('openEditAssignmentModal', '10.50.1.40')
+            ->set('edit_assigned_to', 'Core Switch 01')
+            ->set('edit_host_type', 'network')
+            ->call('saveAssignmentEdit')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'address_text' => '10.50.1.40',
+            'assigned_to' => 'Core Switch 01',
+            'host_type' => 'network',
+        ]);
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\AddressSpace;
 
+use App\Domain\AddressSpace\Enums\HostType;
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
@@ -30,11 +31,13 @@ class AllocateIpAction
      *     subnet_id: int,
      *     ip_address?: ?string,
      *     classification?: string|IpClassification,
+     *     host_type?: ?string|HostType,
      *     hostname?: ?string,
      *     mac_address?: ?string,
      *     assigned_to?: ?string,
      *     description?: ?string,
-     *     idempotency_key?: ?string
+     *     idempotency_key?: ?string,
+     *     force_unquarantine?: ?bool
      * } $data
      */
     public function execute(array $data, ?User $actor = null): IpAddress
@@ -56,6 +59,14 @@ class AllocateIpAction
             if ($existingAssignment) {
                 return $existingAssignment->ipAddress;
             }
+        }
+
+        // Resolve Host Type if provided
+        $hostType = null;
+        if (!empty($data['host_type'])) {
+            $hostType = $data['host_type'] instanceof HostType
+                ? $data['host_type']
+                : HostType::tryFrom((string) $data['host_type']);
         }
 
         // 2. Candidate Resolution (Auto vs Explicit)
@@ -90,7 +101,7 @@ class AllocateIpAction
         while ($attempt < $maxRetries) {
             $attempt++;
             try {
-                return DB::transaction(function () use ($subnet, $ipVO, $data, $actor, $idempotencyKey) {
+                return DB::transaction(function () use ($subnet, $ipVO, $data, $actor, $idempotencyKey, $hostType) {
                     $addressHex = $ipVO->toHex();
 
                     $ipRecord = IpAddress::where('subnet_id', $subnet->id)
@@ -106,6 +117,7 @@ class AllocateIpAction
                             'address_text' => $ipVO->toNormalizedString(),
                             'allocation_status' => IpAllocationStatus::UNASSIGNED,
                             'classification' => $data['classification'] ?? IpClassification::STATIC_HOST,
+                            'host_type' => $hostType,
                             'hostname' => !empty($data['hostname']) ? trim($data['hostname']) : null,
                             'mac_address' => !empty($data['mac_address']) ? strtoupper(trim($data['mac_address'])) : null,
                             'assigned_to' => !empty($data['assigned_to']) ? trim($data['assigned_to']) : null,
@@ -126,15 +138,23 @@ class AllocateIpAction
                     }
 
                     if ($ipRecord->isQuarantined()) {
-                        throw ValidationException::withMessages([
-                            'ip_address' => "Address {$ipRecord->address_text} is currently held in post-release quarantine until {$ipRecord->quarantined_until?->toIso8601String()}.",
-                        ]);
+                        if (!empty($data['force_unquarantine'])) {
+                            $ipRecord->assignments()->whereNull('released_at')->update([
+                                'released_at' => now(),
+                                'release_reason' => 'Quarantine lifted for reallocation',
+                            ]);
+                        } else {
+                            throw ValidationException::withMessages([
+                                'ip_address' => "Address {$ipRecord->address_text} is currently held in post-release quarantine until {$ipRecord->quarantined_until?->toIso8601String()}.",
+                            ]);
+                        }
                     }
 
                     // Create assignment record
                     $assignment = IpAssignment::create([
                         'ip_address_id' => $ipRecord->id,
                         'assigned_to' => !empty($data['assigned_to']) ? trim($data['assigned_to']) : null,
+                        'host_type' => $hostType ?? $ipRecord->host_type,
                         'hostname' => !empty($data['hostname']) ? trim($data['hostname']) : null,
                         'mac_address' => !empty($data['mac_address']) ? strtoupper(trim($data['mac_address'])) : null,
                         'assigned_at' => now(),
@@ -148,6 +168,7 @@ class AllocateIpAction
                     $ipRecord->update([
                         'allocation_status' => IpAllocationStatus::ASSIGNED,
                         'classification' => $data['classification'] ?? $ipRecord->classification,
+                        'host_type' => $hostType ?? $ipRecord->host_type,
                         'hostname' => !empty($data['hostname']) ? trim($data['hostname']) : $ipRecord->hostname,
                         'mac_address' => !empty($data['mac_address']) ? strtoupper(trim($data['mac_address'])) : $ipRecord->mac_address,
                         'assigned_to' => !empty($data['assigned_to']) ? trim($data['assigned_to']) : $ipRecord->assigned_to,

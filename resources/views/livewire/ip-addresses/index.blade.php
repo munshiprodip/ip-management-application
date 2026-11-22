@@ -56,6 +56,19 @@
                     <option value="quarantined">Quarantined</option>
                 </select>
             </div>
+
+            <div>
+                <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Host Type Filter:</label>
+                <select
+                    wire:model.live="hostTypeFilter"
+                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 font-medium"
+                >
+                    <option value="all">All Host Types</option>
+                    @foreach($hostTypes as $ht)
+                        <option value="{{ $ht->value }}">{{ $ht->label() }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
 
         @if($selectedSubnet)
@@ -86,6 +99,7 @@
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-mono uppercase text-[11px]">
                         <th class="py-3 px-4">Candidate IP</th>
                         <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Host Type</th>
                         <th class="py-3 px-4">Hostname</th>
                         <th class="py-3 px-4">Assigned To</th>
                         <th class="py-3 px-4">Subnet Mask</th>
@@ -122,6 +136,15 @@
                                     <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available
                                     </span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap">
+                                @if(!empty($item['host_type']))
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] border {{ $item['host_type']->badgeClasses() }}" title="{{ $item['host_type']->description() }}">
+                                        {{ $item['host_type']->label() }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-400 font-mono text-[11px]">—</span>
                                 @endif
                             </td>
                             <td class="py-3 px-4 font-mono text-[11px] text-slate-800 dark:text-slate-200">
@@ -203,6 +226,24 @@
                                                 Details
                                             </button>
                                         @endif
+                                    @elseif($statusStr === 'quarantined')
+                                        <button
+                                            wire:click="unquarantineIp('{{ $item['ip_text'] }}')"
+                                            type="button"
+                                            class="px-2 py-1 rounded bg-amber-50 hover:bg-emerald-100 text-amber-700 hover:text-emerald-700 border border-amber-300 hover:border-emerald-300 text-[11px] font-semibold transition"
+                                            title="Lift quarantine and mark address as unassigned / available"
+                                        >
+                                            Make Unassigned
+                                        </button>
+                                        @if($item['id'])
+                                            <button
+                                                wire:click="viewDetails({{ $item['id'] }})"
+                                                type="button"
+                                                class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition"
+                                            >
+                                                Details
+                                            </button>
+                                        @endif
                                     @elseif($item['id'])
                                         <button
                                             wire:click="viewDetails({{ $item['id'] }})"
@@ -217,7 +258,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-8 px-4 text-center text-slate-400">
+                            <td colspan="9" class="py-8 px-4 text-center text-slate-400">
                                 @if($selectedSubnet)
                                     No addresses matching criteria in candidate window.
                                 @else
@@ -300,6 +341,31 @@
                         </div>
 
                         <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type *</label>
+                            <select
+                                wire:model="alloc_host_type"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                            >
+                                @foreach($hostTypes as $ht)
+                                    <option value="{{ $ht->value }}">{{ $ht->label() }} ({{ $ht->description() }})</option>
+                                @endforeach
+                            </select>
+                            @error('alloc_host_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Hostname (FQDN or short)</label>
+                            <input
+                                wire:model="alloc_hostname"
+                                type="text"
+                                placeholder="e.g. icu-mon-01.kyamch.local"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            />
+                        </div>
+
+                        <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label>
                             <input
                                 wire:model="alloc_mac_address"
@@ -308,16 +374,6 @@
                                 class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
                             />
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Hostname (FQDN or short)</label>
-                        <input
-                            wire:model="alloc_hostname"
-                            type="text"
-                            placeholder="e.g. icu-mon-01.kyamch.local"
-                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
-                        />
                     </div>
 
                     <div>
@@ -473,6 +529,14 @@
                             <span class="text-slate-500">Assigned To:</span>
                             <span>{{ $detailIp->assigned_to ?? '—' }}</span>
                         </div>
+                        @if($detailIp->host_type)
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-500">Host Type:</span>
+                                <span class="px-2 py-0.5 rounded text-[11px] border {{ $detailIp->host_type->badgeClasses() }}" title="{{ $detailIp->host_type->description() }}">
+                                    {{ $detailIp->host_type->label() }}
+                                </span>
+                            </div>
+                        @endif
                         @if($detailIp->quarantined_until)
                             <div class="flex justify-between text-purple-600">
                                 <span>Quarantine Until:</span>
@@ -480,6 +544,28 @@
                             </div>
                         @endif
                     </div>
+
+                    @if($detailIp->isQuarantined())
+                        <div class="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2">
+                            <div class="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-bold text-[11px]">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                <span>Post-Release Quarantine Active</span>
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-400 text-[11px]">
+                                Address is cooling off until {{ $detailIp->quarantined_until?->toDateTimeString() }}.
+                                @if($detailIp->quarantine_reason)
+                                    <br><span class="text-slate-500">Reason: {{ $detailIp->quarantine_reason }}</span>
+                                @endif
+                            </p>
+                            <button
+                                wire:click="unquarantineIp('{{ $detailIp->address_text }}')"
+                                type="button"
+                                class="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold shadow-xs transition"
+                            >
+                                Lift Quarantine & Make Unassigned
+                            </button>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Assignment History -->
@@ -544,6 +630,20 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type</label>
+                            <select
+                                wire:model="edit_host_type"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                            >
+                                <option value="">None / Unspecified</option>
+                                @foreach($hostTypes as $ht)
+                                    <option value="{{ $ht->value }}">{{ $ht->label() }} ({{ $ht->description() }})</option>
+                                @endforeach
+                            </select>
+                            @error('edit_host_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Hostname (FQDN)</label>
                             <input
                                 wire:model="edit_hostname"
@@ -552,16 +652,16 @@
                                 class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-emerald-500"
                             />
                         </div>
+                    </div>
 
-                        <div>
-                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label>
-                            <input
-                                wire:model="edit_mac_address"
-                                type="text"
-                                placeholder="AA:BB:CC:DD:EE:FF"
-                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono uppercase focus:ring-2 focus:ring-emerald-500"
-                            />
-                        </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label>
+                        <input
+                            wire:model="edit_mac_address"
+                            type="text"
+                            placeholder="AA:BB:CC:DD:EE:FF"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono uppercase focus:ring-2 focus:ring-emerald-500"
+                        />
                     </div>
 
                     <div>

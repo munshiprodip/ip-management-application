@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\AddressSpace\Enums\HostType;
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
@@ -26,6 +27,7 @@ class IpAddress extends Model
         'address_text',
         'allocation_status',
         'classification',
+        'host_type',
         'hostname',
         'mac_address',
         'assigned_to',
@@ -41,6 +43,7 @@ class IpAddress extends Model
             'ip_version' => 'integer',
             'allocation_status' => IpAllocationStatus::class,
             'classification' => IpClassification::class,
+            'host_type' => HostType::class,
             'assigned_at' => 'datetime',
             'quarantined_until' => 'datetime',
         ];

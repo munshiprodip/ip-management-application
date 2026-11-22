@@ -7,6 +7,8 @@ namespace App\Livewire\IPAddresses;
 use App\Actions\AddressSpace\AllocateIpAction;
 use App\Actions\AddressSpace\ReleaseIpAction;
 use App\Actions\AddressSpace\ReserveIpAction;
+use App\Actions\AddressSpace\UnquarantineIpAction;
+use App\Domain\AddressSpace\Enums\HostType;
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
@@ -31,6 +33,7 @@ class Index extends Component
     public int $currentPage = 1;
     public int $perPage = 50;
     public string $statusFilter = 'all'; // 'all', 'unassigned', 'assigned', 'reserved', 'quarantined'
+    public string $hostTypeFilter = 'all';
     public string $search = '';
 
     // Allocate Modal
@@ -38,6 +41,7 @@ class Index extends Component
     public string $alloc_ip = '';
     public bool $alloc_auto_free = false;
     public string $alloc_classification = 'static_host';
+    public string $alloc_host_type = 'workstation';
     public string $alloc_hostname = '';
     public string $alloc_mac_address = '';
     public string $alloc_assigned_to = '';
@@ -64,6 +68,7 @@ class Index extends Component
     public ?int $editIpId = null;
     public string $edit_ip_text = '';
     public string $edit_assigned_to = '';
+    public ?string $edit_host_type = null;
     public string $edit_hostname = '';
     public string $edit_mac_address = '';
     public string $edit_description = '';
@@ -128,6 +133,7 @@ class Index extends Component
         $this->alloc_ip = $ip ?? '';
         $this->alloc_auto_free = empty($ip);
         $this->alloc_classification = 'static_host';
+        $this->alloc_host_type = 'workstation';
         $this->alloc_hostname = '';
         $this->alloc_mac_address = '';
         $this->alloc_assigned_to = '';
@@ -162,6 +168,7 @@ class Index extends Component
         $this->validate([
             'alloc_ip' => 'required|string',
             'alloc_classification' => 'required|string',
+            'alloc_host_type' => ['required', 'string', 'in:' . implode(',', array_column(HostType::cases(), 'value'))],
         ]);
 
         try {
@@ -169,6 +176,7 @@ class Index extends Component
                 'subnet_id' => $this->selectedSubnetId,
                 'ip_address' => $this->alloc_ip,
                 'classification' => IpClassification::from($this->alloc_classification),
+                'host_type' => HostType::from($this->alloc_host_type),
                 'hostname' => !empty($this->alloc_hostname) ? $this->alloc_hostname : null,
                 'mac_address' => !empty($this->alloc_mac_address) ? $this->alloc_mac_address : null,
                 'assigned_to' => !empty($this->alloc_assigned_to) ? $this->alloc_assigned_to : null,
@@ -253,12 +261,14 @@ class Index extends Component
         if ($record) {
             $this->editIpId = $record->id;
             $this->edit_assigned_to = (string) $record->assigned_to;
+            $this->edit_host_type = $record->host_type?->value ?? 'workstation';
             $this->edit_hostname = (string) $record->hostname;
             $this->edit_mac_address = (string) $record->mac_address;
             $this->edit_description = (string) $record->description;
         } else {
             $this->editIpId = null;
             $this->edit_assigned_to = '';
+            $this->edit_host_type = 'workstation';
             $this->edit_hostname = '';
             $this->edit_mac_address = '';
             $this->edit_description = '';
@@ -271,6 +281,7 @@ class Index extends Component
     {
         $this->validate([
             'edit_assigned_to' => ['required', 'string', 'max:255'],
+            'edit_host_type' => ['nullable', 'string', 'in:' . implode(',', array_column(HostType::cases(), 'value'))],
             'edit_hostname' => ['nullable', 'string', 'max:255'],
             'edit_mac_address' => ['nullable', 'string', 'max:32'],
             'edit_description' => ['nullable', 'string', 'max:1000'],
@@ -281,10 +292,13 @@ class Index extends Component
             ->where('address_hex', $ipVO->toHex())
             ->first();
 
+        $hostType = !empty($this->edit_host_type) ? HostType::tryFrom($this->edit_host_type) : null;
+
         if ($record) {
             $before = $record->toArray();
             $record->update([
                 'assigned_to' => trim($this->edit_assigned_to),
+                'host_type' => $hostType,
                 'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
                 'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
                 'description' => $this->edit_description ? trim($this->edit_description) : null,
@@ -295,6 +309,7 @@ class Index extends Component
             if ($assignment) {
                 $assignment->update([
                     'assigned_to' => trim($this->edit_assigned_to),
+                    'host_type' => $hostType,
                     'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
                     'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
                 ]);
@@ -315,6 +330,7 @@ class Index extends Component
                 'subnet_id' => $this->selectedSubnetId,
                 'ip_address' => $this->edit_ip_text,
                 'assigned_to' => trim($this->edit_assigned_to),
+                'host_type' => $hostType,
                 'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
                 'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
                 'description' => $this->edit_description ? trim($this->edit_description) : null,
@@ -324,6 +340,27 @@ class Index extends Component
         }
 
         $this->showEditModal = false;
+    }
+
+    public function unquarantineIp(string $ipText, UnquarantineIpAction $action): void
+    {
+        $ipVO = IpAddressVO::parse($ipText);
+        $record = IpAddress::where('subnet_id', $this->selectedSubnetId)
+            ->where('address_hex', $ipVO->toHex())
+            ->first();
+
+        if (! $record) {
+            session()->flash('error', "IP address record for {$ipText} not found.");
+            return;
+        }
+
+        try {
+            $action->execute($record, 'Quarantine manually cleared by operator', auth()->user());
+            session()->flash('success', "IP address {$ipText} removed from quarantine and marked as unassigned / available.");
+            $this->showDetailsDrawer = false;
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function render()
@@ -364,6 +401,14 @@ class Index extends Component
                     return $statusValue === $filter;
                 });
             }
+
+            if ($this->hostTypeFilter !== 'all') {
+                $htFilter = $this->hostTypeFilter;
+                $windowData['items'] = array_filter($windowData['items'], function ($item) use ($htFilter) {
+                    $htValue = $item['host_type'] instanceof HostType ? $item['host_type']->value : (string) ($item['host_type'] ?? '');
+                    return $htValue === $htFilter;
+                });
+            }
         }
 
         $detailIp = $this->detailIpId ? IpAddress::with(['assignments.assignedBy', 'reservations.reservedBy'])->find($this->detailIpId) : null;
@@ -374,6 +419,7 @@ class Index extends Component
             'windowData' => $windowData,
             'detailIp' => $detailIp,
             'classifications' => IpClassification::cases(),
+            'hostTypes' => HostType::cases(),
         ]);
     }
 }

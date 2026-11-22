@@ -72,6 +72,7 @@ class CandidateWindowGenerator
                 $record = $materialized[$hex];
                 $status = $record->allocation_status;
                 $classification = $record->classification;
+                $hostType = $record->host_type;
                 $hostname = $record->hostname;
                 $macAddress = $record->mac_address;
                 $assignedTo = $record->assigned_to;
@@ -80,6 +81,7 @@ class CandidateWindowGenerator
             } else {
                 $status = IpAllocationStatus::UNASSIGNED;
                 $classification = IpClassification::STATIC_HOST;
+                $hostType = null;
                 $hostname = null;
                 $macAddress = null;
                 $assignedTo = null;
@@ -111,6 +113,7 @@ class CandidateWindowGenerator
                 'hex' => $hex,
                 'status' => $status,
                 'classification' => $classification,
+                'host_type' => $hostType,
                 'hostname' => $hostname,
                 'mac_address' => $macAddress,
                 'assigned_to' => $assignedTo,

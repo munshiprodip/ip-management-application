@@ -6,14 +6,17 @@ namespace Database\Seeders;
 
 use App\Actions\AddressSpace\AllocateIpAction;
 use App\Actions\AddressSpace\CreateSubnetAction;
+use App\Actions\AddressSpace\ReleaseIpAction;
 use App\Actions\AddressSpace\ReserveIpAction;
 use App\Actions\Layer2\CreateVlanAction;
 use App\Actions\Site\CreateSiteAction;
+use App\Domain\AddressSpace\Enums\HostType;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\Enums\SubnetType;
 use App\Domain\Layer2\Enums\VlanSecurityZone;
 use App\Domain\Security\Enums\UserRole;
 use App\Models\AuditEvent;
+use App\Models\IpAddress;
 use App\Models\IpExclusion;
 use App\Models\IpPool;
 use App\Models\Site;
@@ -276,34 +279,92 @@ class DatabaseSeeder extends Seeder
 
             // 5. Allocate Sample IPs
             $allocateAction = app(AllocateIpAction::class);
+            $releaseAction = app(ReleaseIpAction::class);
             $reserveAction = app(ReserveIpAction::class);
 
-            $allocateAction->execute([
-                'subnet_id' => $icuSubnet->id,
-                'ip_address' => '10.10.20.15',
-                'classification' => IpClassification::STATIC_HOST,
-                'hostname' => 'icu-mon-01.kyamch.local',
-                'mac_address' => '00:1A:2B:3C:4D:5E',
-                'assigned_to' => 'ICU Bed 1 Patient Monitor',
-                'description' => 'Philips IntelliVue bedside patient monitor in ICU Bed 1',
-            ], $admin);
+            if (! IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.15')->exists()) {
+                $allocateAction->execute([
+                    'subnet_id' => $icuSubnet->id,
+                    'ip_address' => '10.10.20.15',
+                    'classification' => IpClassification::STATIC_HOST,
+                    'host_type' => HostType::MEDICAL,
+                    'hostname' => 'icu-mon-01.kyamch.local',
+                    'mac_address' => '00:1A:2B:3C:4D:5E',
+                    'assigned_to' => 'ICU Bed 1 Patient Monitor',
+                    'description' => 'Philips IntelliVue bedside patient monitor in ICU Bed 1',
+                ], $admin);
+            } else {
+                IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.15')->update([
+                    'host_type' => HostType::MEDICAL->value,
+                ]);
+            }
 
-            $allocateAction->execute([
-                'subnet_id' => $icuSubnet->id,
-                'ip_address' => '10.10.20.16',
-                'classification' => IpClassification::STATIC_HOST,
-                'hostname' => 'icu-mon-02.kyamch.local',
-                'mac_address' => '00:1A:2B:3C:4D:5F',
-                'assigned_to' => 'ICU Bed 2 Patient Monitor',
-                'description' => 'Philips IntelliVue bedside patient monitor in ICU Bed 2',
-            ], $admin);
+            if (! IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.16')->exists()) {
+                $allocateAction->execute([
+                    'subnet_id' => $icuSubnet->id,
+                    'ip_address' => '10.10.20.16',
+                    'classification' => IpClassification::STATIC_HOST,
+                    'host_type' => HostType::MEDICAL,
+                    'hostname' => 'icu-mon-02.kyamch.local',
+                    'mac_address' => '00:1A:2B:3C:4D:5F',
+                    'assigned_to' => 'ICU Bed 2 Patient Monitor',
+                    'description' => 'Philips IntelliVue bedside patient monitor in ICU Bed 2',
+                ], $admin);
+            } else {
+                IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.16')->update([
+                    'host_type' => HostType::MEDICAL->value,
+                ]);
+            }
 
-            $reserveAction->execute([
-                'subnet_id' => $icuSubnet->id,
-                'ip_address' => '10.10.20.25',
-                'reason' => 'Reserved for upcoming Dialysis Telemetry Gateway',
-                'expires_at' => now()->addDays(30)->toDateString(),
-            ], $admin);
+            if (! IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.17')->exists()) {
+                $allocateAction->execute([
+                    'subnet_id' => $icuSubnet->id,
+                    'ip_address' => '10.10.20.17',
+                    'classification' => IpClassification::STATIC_HOST,
+                    'host_type' => HostType::WORKSTATION,
+                    'hostname' => 'icu-nurse-pc.kyamch.local',
+                    'mac_address' => '00:1A:2B:3C:4D:60',
+                    'assigned_to' => 'ICU Central Nursing Station PC',
+                    'description' => 'Dell OptiPlex workstation for nursing shift staff',
+                ], $admin);
+            }
+
+            if (! IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.18')->exists()) {
+                $allocateAction->execute([
+                    'subnet_id' => $icuSubnet->id,
+                    'ip_address' => '10.10.20.18',
+                    'classification' => IpClassification::STATIC_HOST,
+                    'host_type' => HostType::PRINTER,
+                    'hostname' => 'icu-label-prn.kyamch.local',
+                    'mac_address' => '00:1A:2B:3C:4D:61',
+                    'assigned_to' => 'ICU Medical Label & Rx Printer',
+                    'description' => 'Zebra barcode and wristband thermal printer',
+                ], $admin);
+            }
+
+            // Seed a Quarantined address to demonstrate "Make Unassigned" action
+            if (! IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.19')->exists()) {
+                $quarantineCandidate = $allocateAction->execute([
+                    'subnet_id' => $icuSubnet->id,
+                    'ip_address' => '10.10.20.19',
+                    'classification' => IpClassification::STATIC_HOST,
+                    'host_type' => HostType::MEDICAL,
+                    'hostname' => 'icu-old-mon.kyamch.local',
+                    'mac_address' => '00:1A:2B:3C:4D:99',
+                    'assigned_to' => 'Decommissioned ICU Monitor 9',
+                    'description' => 'Decommissioned bedside telemetry hardware',
+                ], $admin);
+                $releaseAction->execute($quarantineCandidate, 'Decommissioned hardware; 5-day quarantine cooling period.', 5, $admin);
+            }
+
+            if (! IpAddress::where('subnet_id', $icuSubnet->id)->where('address_text', '10.10.20.25')->exists()) {
+                $reserveAction->execute([
+                    'subnet_id' => $icuSubnet->id,
+                    'ip_address' => '10.10.20.25',
+                    'reason' => 'Reserved for upcoming Dialysis Telemetry Gateway',
+                    'expires_at' => now()->addDays(30)->toDateString(),
+                ], $admin);
+            }
         }
 
         AuditEvent::record(

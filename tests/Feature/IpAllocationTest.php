@@ -8,6 +8,8 @@ use App\Actions\AddressSpace\AllocateIpAction;
 use App\Actions\AddressSpace\CreateSubnetAction;
 use App\Actions\AddressSpace\ReleaseIpAction;
 use App\Actions\AddressSpace\ReserveIpAction;
+use App\Actions\AddressSpace\UnquarantineIpAction;
+use App\Domain\AddressSpace\Enums\HostType;
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\Enums\SubnetType;
@@ -205,5 +207,68 @@ class IpAllocationTest extends TestCase
             'subnet_id' => $this->subnet->id,
             'ip_address' => '10.10.1.200',
         ], $this->admin);
+    }
+
+    public function test_t014_unquarantine_returns_address_to_unassigned(): void
+    {
+        $allocateAction = app(AllocateIpAction::class);
+        $releaseAction = app(ReleaseIpAction::class);
+        $unquarantineAction = app(UnquarantineIpAction::class);
+
+        $ip = $allocateAction->execute([
+            'subnet_id' => $this->subnet->id,
+            'ip_address' => '10.10.1.95',
+            'host_type' => HostType::MEDICAL,
+            'hostname' => 'infusion-01.kyamch.local',
+            'assigned_to' => 'ICU Infusion Pump 1',
+        ], $this->admin);
+
+        // Put in quarantine
+        $quarantined = $releaseAction->execute($ip, 'Infusion pump maintenance', 7, $this->admin);
+        $this->assertEquals(IpAllocationStatus::QUARANTINED, $quarantined->allocation_status);
+        $this->assertFalse($quarantined->isAvailable());
+
+        // Lift quarantine manually (Make Unassigned)
+        $unquarantined = $unquarantineAction->execute($quarantined, 'Operator cleared quarantine', $this->admin);
+
+        $this->assertEquals(IpAllocationStatus::UNASSIGNED, $unquarantined->allocation_status);
+        $this->assertNull($unquarantined->quarantined_until);
+        $this->assertNull($unquarantined->assigned_to);
+        $this->assertTrue($unquarantined->isAvailable());
+
+        // Should now be immediately re-allocatable
+        $reallocated = $allocateAction->execute([
+            'subnet_id' => $this->subnet->id,
+            'ip_address' => '10.10.1.95',
+            'host_type' => HostType::WORKSTATION,
+            'assigned_to' => 'Nursing Station 2',
+        ], $this->admin);
+
+        $this->assertEquals('10.10.1.95', $reallocated->address_text);
+        $this->assertEquals(IpAllocationStatus::ASSIGNED, $reallocated->allocation_status);
+        $this->assertEquals(HostType::WORKSTATION, $reallocated->host_type);
+    }
+
+    public function test_t015_allocation_with_host_type(): void
+    {
+        $action = app(AllocateIpAction::class);
+
+        $allocated = $action->execute([
+            'subnet_id' => $this->subnet->id,
+            'ip_address' => '10.10.1.150',
+            'host_type' => HostType::SERVER,
+            'hostname' => 'his-db.kyamch.local',
+            'assigned_to' => 'HIS Database Primary Node',
+        ], $this->admin);
+
+        $this->assertEquals(HostType::SERVER, $allocated->host_type);
+        $this->assertDatabaseHas('ip_addresses', [
+            'address_text' => '10.10.1.150',
+            'host_type' => 'server',
+        ]);
+        $this->assertDatabaseHas('ip_assignments', [
+            'ip_address_id' => $allocated->id,
+            'host_type' => 'server',
+        ]);
     }
 }
