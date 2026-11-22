@@ -4,7 +4,7 @@
 > **Current Version:** 2.0.0 (Streamlined Core Architecture)  
 > **Last Updated:** 2026-11-22  
 > **Architecture Scope:** Focused Core IPAM (Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations)  
-> **Status:** All 71 Automated Tests Passing (100% Pass Rate)
+> **Status:** All 72 Automated Tests Passing (100% Pass Rate)
 
 ---
 
@@ -18,6 +18,8 @@ Per architectural direction to eliminate operational overhead and minimize the s
    - Strict CIDR canonicalization and parent-child containment validation.
    - Global sibling non-overlap validation per address family.
    - Dynamic CIDR calculator and visual subnet split preview tool.
+   - Interactive inline expand/collapse toggles on parent subnets to view and manage child subnets directly within the hierarchy tree.
+   - One-click `Expand All` and `Collapse All` tree controls.
    - Direct association with 802.1Q VLANs.
 
 2. **802.1Q VLAN Management**
