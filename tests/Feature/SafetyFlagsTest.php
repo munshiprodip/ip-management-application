@@ -51,3 +51,4 @@ class SafetyFlagsTest extends TestCase
         $response->assertSee('DISABLED (SAFE)');
     }
 }
+

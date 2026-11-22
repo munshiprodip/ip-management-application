@@ -15,3 +15,4 @@ The system must support both IPv4 and IPv6 as first-class citizens across SQLite
 ## Consequences
 - Range containment checks (`BETWEEN start_hex AND end_hex`) are indexable and deterministic across both SQLite and MySQL.
 - Large IPv6 subnets (e.g., `/64`) can be managed mathematically without enumerating individual host rows.
+

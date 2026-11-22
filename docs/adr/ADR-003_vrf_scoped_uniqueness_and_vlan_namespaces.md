@@ -11,3 +11,4 @@ Hospital networks often use segmented routing domains (VRFs) for biomedical devi
 ## Consequences
 - Prevents accidental address collisions while legitimately supporting multi-VRF network topologies.
 - Enforces relational referential integrity without relying on nullable database constraints.
+

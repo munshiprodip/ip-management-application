@@ -15,3 +15,4 @@ SQLite is chosen for rapid local development and unit testing, while MySQL 8.0+ 
 ## Consequences
 - Frictionless local development and lightning-fast automated test execution.
 - Verified transactional safety and lock behavior in production.
+

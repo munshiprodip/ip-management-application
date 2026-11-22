@@ -57,3 +57,4 @@ class UserRoleTest extends TestCase
         $this->assertFalse($user->hasRole([UserRole::SUPER_ADMIN, UserRole::VIEWER]));
     }
 }
+

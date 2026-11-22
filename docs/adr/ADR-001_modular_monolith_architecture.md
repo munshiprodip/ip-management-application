@@ -21,3 +21,4 @@ KYAMCH IPAM is an enterprise hospital infrastructure system managing critical ne
 - Single unified codebase, atomic database transactions, simplified local testing with SQLite and production deployment on MySQL.
 - Clear internal boundaries prevent domain logic pollution.
 - HTTP requests remain fast and protected from network timeout risks.
+

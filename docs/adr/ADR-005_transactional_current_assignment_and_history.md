@@ -14,3 +14,4 @@ Hospital devices change interfaces, NICs get replaced, and IP addresses get tran
 ## Consequences
 - Guaranteed single active owner per IP address in MySQL and SQLite.
 - Complete auditability and forensic traceability for hospital clinical and administrative devices.
+

@@ -17,3 +17,4 @@ class Index extends Component
         return view('livewire.devices.index');
     }
 }
+

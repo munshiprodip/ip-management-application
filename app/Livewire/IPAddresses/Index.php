@@ -17,3 +17,4 @@ class Index extends Component
         return view('livewire.ip-addresses.index');
     }
 }
+

@@ -35,3 +35,4 @@ This document tracks known assumptions, site-specific variables, and open govern
    - Choice of corporate authentication provider for single sign-on (SSO/LDAP) in Phase 2.
 5. **Authoritative DHCP / DNS Servers:**
    - Make and model of internal DHCP/DNS engines (Windows Server DHCP/DNS, Infoblox, Cisco IOS, etc.) for read-only sync adapters in Stage 6.
+

@@ -60,3 +60,4 @@ class AuditLogTest extends TestCase
         $this->assertEquals($first->id, $recent->last()->id);
     }
 }
+

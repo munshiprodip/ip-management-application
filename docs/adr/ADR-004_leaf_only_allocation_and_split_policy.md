@@ -12,3 +12,4 @@ When parent subnets contain children (e.g., `/16` aggregate containing `/24` dep
 ## Consequences
 - Eliminates ambiguous address ownership between parent aggregates and child blocks.
 - Provides mathematically sound utilization metrics.
+

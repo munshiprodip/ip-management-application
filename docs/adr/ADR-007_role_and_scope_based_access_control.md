@@ -20,3 +20,4 @@ Different hospital departments (Biomedical, Radiology, Administration, Network O
 ## Consequences
 - Strict compliance with hospital governance standards.
 - Defense-in-depth: hidden UI elements are backed by rigorous policy evaluation.
+

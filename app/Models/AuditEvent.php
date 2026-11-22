@@ -95,3 +95,4 @@ class AuditEvent extends Model
         ]);
     }
 }
+

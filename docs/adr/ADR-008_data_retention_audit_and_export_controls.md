@@ -13,3 +13,4 @@ Hospital accreditation and IT security policies require a complete forensic trai
 ## Consequences
 - Guaranteed audit compliance for regulatory inspections.
 - Safe data exports for management reporting.
+
