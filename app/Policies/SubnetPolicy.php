@@ -39,3 +39,4 @@ class SubnetPolicy
         return $user->canManageNetwork();
     }
 }
+

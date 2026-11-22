@@ -188,3 +188,4 @@ class Subnet extends Model
         return $query->where('status', SubnetStatus::ACTIVE);
     }
 }
+

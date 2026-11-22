@@ -36,3 +36,4 @@ enum SubnetType: string
         return in_array($this, [self::ASSIGNABLE, self::POINT_TO_POINT, self::LOOPBACK], true);
     }
 }
+
