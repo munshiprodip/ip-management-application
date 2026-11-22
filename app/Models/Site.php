@@ -44,3 +44,4 @@ class Site extends Model
         return $this->status === 'active';
     }
 }
+

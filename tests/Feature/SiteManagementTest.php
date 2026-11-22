@@ -202,3 +202,4 @@ class SiteManagementTest extends TestCase
         $this->assertEquals($site->id, session('active_site_id'));
     }
 }
+

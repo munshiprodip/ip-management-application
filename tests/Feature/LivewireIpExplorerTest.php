@@ -69,4 +69,24 @@ class LivewireIpExplorerTest extends TestCase
             'allocation_status' => 'assigned',
         ]);
     }
+
+    public function test_livewire_ip_explorer_respects_subnet_query_parameter(): void
+    {
+        $this->actingAs($this->admin);
+
+        $action = app(\App\Actions\AddressSpace\CreateSubnetAction::class);
+        $secondSubnet = $action->execute([
+            'name' => 'Secondary ICU Subnet',
+            'cidr' => '10.60.1.0/24',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+            'allocation_enabled' => true,
+        ]);
+
+        Livewire::withQueryParams(['subnet' => $secondSubnet->id])
+            ->test(IpAddressesIndex::class)
+            ->assertStatus(200)
+            ->assertSet('selectedSubnetId', $secondSubnet->id)
+            ->assertSee('10.60.1.0/24')
+            ->assertSee('10.60.1.1');
+    }
 }

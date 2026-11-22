@@ -32,9 +32,19 @@
                 <span class="w-6 inline-block"></span>
             @endif
 
-            <span class="px-2 py-0.5 rounded {{ $depth > 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold' }}">
-                {{ $subnet->cidr }}
-            </span>
+            @if($subnet->isAssignable() || $subnet->allocation_enabled)
+                <a
+                    href="{{ route('ip-addresses.index', ['subnet' => $subnet->id]) }}"
+                    class="px-2 py-0.5 rounded transition hover:ring-2 hover:ring-emerald-500/50 {{ $depth > 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold' }}"
+                    title="Explore IP addresses in {{ $subnet->cidr }}"
+                >
+                    {{ $subnet->cidr }}
+                </a>
+            @else
+                <span class="px-2 py-0.5 rounded {{ $depth > 0 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold' }}">
+                    {{ $subnet->cidr }}
+                </span>
+            @endif
             <span class="text-[10px] text-slate-400 uppercase font-mono">IPv{{ $subnet->ip_version }}</span>
         </div>
     </td>
@@ -76,6 +86,19 @@
     </td>
     <td class="py-3 px-4 text-right whitespace-nowrap">
         <div class="inline-flex items-center gap-1.5">
+            @if($subnet->isAssignable() || $subnet->allocation_enabled)
+                <a
+                    href="{{ route('ip-addresses.index', ['subnet' => $subnet->id]) }}"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition shadow-2xs"
+                    title="Explore &amp; Allocate IP addresses in {{ $subnet->cidr }}"
+                >
+                    <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <span>Explore IPs</span>
+                </a>
+            @endif
+
             @if($subnet->children_count > 0)
                 <button
                     wire:click="toggleExpand({{ $subnet->id }})"

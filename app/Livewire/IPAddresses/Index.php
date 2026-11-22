@@ -17,12 +17,14 @@ use App\Services\AddressSpace\IpAllocationService;
 use App\Services\SiteContext;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 #[Title('IP Explorer & Address Allocation - KYAMCH IPAM')]
 class Index extends Component
 {
+    #[Url(as: 'subnet')]
     public ?int $selectedSubnetId = null;
 
     // Window navigation
@@ -57,8 +59,23 @@ class Index extends Component
     public bool $showDetailsDrawer = false;
     public ?int $detailIpId = null;
 
-    public function mount(SiteContext $siteContext): void
+    public function mount(SiteContext $siteContext, ?int $subnet = null): void
     {
+        $requestedSubnetId = $subnet ?? $this->selectedSubnetId ?? (request()->query('subnet') ? (int) request()->query('subnet') : null);
+
+        if ($requestedSubnetId) {
+            $targetSubnet = Subnet::find($requestedSubnetId);
+            if ($targetSubnet) {
+                $this->selectedSubnetId = $targetSubnet->id;
+
+                // Sync active campus context if target subnet has a specific site
+                if ($targetSubnet->site_id && $targetSubnet->site_id !== $siteContext->getActiveSiteId()) {
+                    $siteContext->setActiveSiteId($targetSubnet->site_id);
+                }
+                return;
+            }
+        }
+
         $activeSiteId = $siteContext->getActiveSiteId();
 
         $query = Subnet::where('subnet_type', 'assignable')
@@ -227,8 +244,15 @@ class Index extends Component
 
         $subnets = $subnetQuery->orderBy('cidr')->get();
 
-        // If currently selected subnet is not in the filtered subnets, select first available
-        if ($this->selectedSubnetId && $subnets->isNotEmpty() && !$subnets->contains('id', $this->selectedSubnetId)) {
+        // If currently selected subnet exists, ensure it is included in options even if site differed
+        if ($this->selectedSubnetId && !$subnets->contains('id', $this->selectedSubnetId)) {
+            $currentSubnet = Subnet::with('site')->find($this->selectedSubnetId);
+            if ($currentSubnet) {
+                $subnets->prepend($currentSubnet);
+            }
+        }
+
+        if (!$this->selectedSubnetId && $subnets->isNotEmpty()) {
             $this->selectedSubnetId = $subnets->first()->id;
         }
 

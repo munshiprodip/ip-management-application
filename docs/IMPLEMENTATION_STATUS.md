@@ -4,7 +4,7 @@
 > **Current Version:** 2.1.0 (Streamlined Core Architecture with Top-Level Campus Segregation)  
 > **Last Updated:** 2026-11-22  
 > **Architecture Scope:** Focused Core IPAM with Top-Level Site / Campus Segregation (Sites/Campuses, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations)  
-> **Status:** All 80 Automated Tests Passing (100% Pass Rate)
+> **Status:** All 81 Automated Tests Passing (100% Pass Rate)
 
 ---
 
@@ -49,7 +49,7 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 
 | Component | Status | Verification Detail |
 |---|---|---|
-| **Automated Unit & Feature Tests** | **PASSED (80/80)** | PHPUnit suite with 273 assertions across models, actions, services, and Livewire components |
+| **Automated Unit & Feature Tests** | **PASSED (81/81)** | PHPUnit suite with 277 assertions across models, actions, services, and Livewire components |
 | **Database Schema** | **MIGRATED & SEEDED** | 4 core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses` |
 | **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 174ms |
 | **Dev Server (Port 8080)** | **RUNNING** | Active and responsive on `http://127.0.0.1:8080` (Daemon task) |
@@ -57,7 +57,7 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 
 ---
 
-## Active Test Inventory (80 Tests)
+## Active Test Inventory (81 Tests)
 
 1. `AuthenticationTest`: 3 tests (login screen, user login, logout).
 2. `EnterpriseShellTest`: 3 tests (layout render, navigation links including campuses, guest redirect).
@@ -72,4 +72,4 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 11. `VlanManagementTest`: 5 tests (802.1Q tags, validation, subnet association).
 12. `IpAllocationTest`: 8 tests (allocate, release, reserve, quarantine, pool exclusion).
 13. `IpCandidateWindowTest`: 4 tests (virtual candidate pagination, status flags).
-14. `LivewireIpExplorerTest`: 2 tests (Livewire explorer rendering, direct IP allocation).
+14. `LivewireIpExplorerTest`: 3 tests (Livewire explorer rendering, direct IP allocation, query parameter subnet redirection).

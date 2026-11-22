@@ -38,3 +38,4 @@ class SiteContext
         return Site::where('status', 'active')->orderBy('name')->get();
     }
 }
+

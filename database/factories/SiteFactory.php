@@ -27,3 +27,4 @@ class SiteFactory extends Factory
         ];
     }
 }
+

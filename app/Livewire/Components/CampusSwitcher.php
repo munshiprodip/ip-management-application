@@ -35,3 +35,4 @@ class CampusSwitcher extends Component
         ]);
     }
 }
+
