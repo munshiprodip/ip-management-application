@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\AddressSpace;
 
+use App\Domain\AddressSpace\ValueObjects\IpAddress;
 use App\Domain\AddressSpace\ValueObjects\IpPrefix;
 use App\Models\Subnet;
+use Brick\Math\BigInteger;
 use Illuminate\Validation\ValidationException;
 
 class SubnetHierarchyService
@@ -15,22 +17,15 @@ class SubnetHierarchyService
      */
     public function validateHierarchy(
         IpPrefix $prefix,
-        int $vrfId,
         ?int $parentId = null,
         ?int $ignoreSubnetId = null
     ): void {
-        // 1. Parent containment validation (T-002, T-003)
+        // 1. Parent containment validation
         if ($parentId !== null) {
             $parent = Subnet::find($parentId);
             if (! $parent) {
                 throw ValidationException::withMessages([
                     'parent_id' => "Parent subnet #{$parentId} does not exist.",
-                ]);
-            }
-
-            if ($parent->vrf_id !== $vrfId) {
-                throw ValidationException::withMessages([
-                    'parent_id' => "Parent subnet belongs to a different VRF context.",
                 ]);
             }
 
@@ -55,49 +50,41 @@ class SubnetHierarchyService
             }
         }
 
-        // 2. Overlapping siblings and illegal overlap detection within the same VRF (T-004)
-        $conflicts = Subnet::where('vrf_id', $vrfId)
-            ->where('ip_version', $prefix->version())
+        // 2. Overlapping siblings and illegal overlap detection within the same address family
+        $conflicts = Subnet::where('ip_version', $prefix->version())
             ->when($ignoreSubnetId, fn ($q) => $q->where('id', '!=', $ignoreSubnetId))
             ->get();
 
         foreach ($conflicts as $existing) {
             $existingPrefix = $existing->toIpPrefix();
 
-            // Check if prefixes have any overlapping address space
             if ($prefix->overlapsPrefix($existingPrefix)) {
-                // If it is our designated parent, it is valid containment
                 if ($parentId !== null && $existing->id === $parentId) {
                     continue;
                 }
 
-                // If this new prefix is a proper ancestor (or proper descendant) of an existing subnet,
-                // verify that the hierarchy matches parent_id relationship.
                 if ($prefix->isProperAncestorOf($existingPrefix)) {
-                    // Allowed only if existing is a descendant, but for sibling/peer in same level it is prohibited
                     continue;
                 }
 
                 if ($existingPrefix->isProperAncestorOf($prefix)) {
-                    // If existing is an ancestor, it MUST be the declared parent or an ancestor of parent
                     if ($parentId === null) {
                         throw ValidationException::withMessages([
-                            'cidr' => "Prefix {$prefix->cidr()} overlaps with existing subnet {$existingPrefix->cidr()} in this VRF. Must declare parent relationship.",
+                            'cidr' => "Prefix {$prefix->cidr()} overlaps with existing subnet {$existingPrefix->cidr()}. Must declare parent relationship.",
                         ]);
                     }
                     continue;
                 }
 
-                // In all other cases (identical CIDR duplicate, or overlapping siblings/partial overlap):
                 throw ValidationException::withMessages([
-                    'cidr' => "Prefix {$prefix->cidr()} illegally overlaps with existing subnet {$existingPrefix->cidr()} ({$existing->name}) in this VRF.",
+                    'cidr' => "Prefix {$prefix->cidr()} illegally overlaps with existing subnet {$existingPrefix->cidr()} ({$existing->name}).",
                 ]);
             }
         }
     }
 
     /**
-     * Validate that setting a new parent does not create an ancestry cycle (T-005).
+     * Validate that setting a new parent does not create an ancestry cycle.
      */
     public function validateNoCycle(Subnet $subnet, int $newParentId): void
     {
@@ -111,7 +98,7 @@ class SubnetHierarchyService
         while ($current !== null) {
             if ($current->id === $subnet->id) {
                 throw ValidationException::withMessages([
-                    'parent_id' => 'Cycle detected: this subnet is already an ancestor of the selected parent.',
+                    'parent_id' => 'Cycle detected: Cannot make a subnet a child of its own descendant.',
                 ]);
             }
             $current = $current->parent;
@@ -119,30 +106,44 @@ class SubnetHierarchyService
     }
 
     /**
-     * Find next available child prefix of a given length within a parent prefix.
+     * Suggest next free child prefix inside a parent container.
      */
     public function findFreeChildPrefix(Subnet $parent, int $childPrefixLength): ?IpPrefix
     {
         $parentPrefix = $parent->toIpPrefix();
-        $candidates = $parentPrefix->split($childPrefixLength);
+        if ($childPrefixLength <= $parentPrefix->prefixLength()) {
+            return null;
+        }
 
-        $existingChildren = $parent->children()->get()->map(fn (Subnet $s) => $s->toIpPrefix());
+        $childBits = ($parent->ip_version === 4) ? (32 - $childPrefixLength) : (128 - $childPrefixLength);
+        $childSpan = BigInteger::of(2)->power($childBits);
 
-        foreach ($candidates as $candidate) {
-            $isUsed = false;
-            foreach ($existingChildren as $existing) {
-                if ($candidate->overlapsPrefix($existing)) {
-                    $isUsed = true;
+        $existingChildren = $parent->children()->orderBy('network_hex')->get();
+        $occupiedHexRanges = $existingChildren->map(fn($c) => [$c->network_hex, $c->end_hex])->all();
+
+        $currentInt = $parentPrefix->networkAddress()->toBigInteger();
+        $endInt = $parentPrefix->broadcastAddress()->toBigInteger();
+
+        while ($currentInt->plus($childSpan)->minus(1)->compareTo($endInt) <= 0) {
+            $candidatePrefix = IpPrefix::fromBigIntegerAndLength($currentInt, $childPrefixLength, $parent->ip_version);
+            $candidateStartHex = $candidatePrefix->networkHex();
+            $candidateEndHex = $candidatePrefix->endHex();
+
+            $isOccupied = false;
+            foreach ($occupiedHexRanges as [$occStart, $occEnd]) {
+                if (strcmp($candidateStartHex, $occEnd) <= 0 && strcmp($candidateEndHex, $occStart) >= 0) {
+                    $isOccupied = true;
                     break;
                 }
             }
 
-            if (! $isUsed) {
-                return $candidate;
+            if (! $isOccupied) {
+                return $candidatePrefix;
             }
+
+            $currentInt = $currentInt->plus($childSpan);
         }
 
         return null;
     }
 }
-

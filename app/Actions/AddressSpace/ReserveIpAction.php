@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Actions\AddressSpace;
 
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
-use App\Domain\AddressSpace\Enums\ReservationStatus;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
 use App\Models\AuditEvent;
-use App\Models\Device;
 use App\Models\IpAddress;
 use App\Models\IpReservation;
 use App\Models\Subnet;
@@ -24,7 +22,6 @@ class ReserveIpAction
      *     subnet_id: int,
      *     ip_address: string,
      *     reason: string,
-     *     device_id?: ?int,
      *     expires_at?: ?string
      * } $data
      */
@@ -42,15 +39,13 @@ class ReserveIpAction
         $addressHex = $ipVO->toHex();
 
         return DB::transaction(function () use ($subnet, $ipVO, $addressHex, $data, $actor) {
-            $ipRecord = IpAddress::where('vrf_id', $subnet->vrf_id)
-                ->where('ip_version', $subnet->ip_version)
+            $ipRecord = IpAddress::where('subnet_id', $subnet->id)
                 ->where('address_hex', $addressHex)
                 ->lockForUpdate()
                 ->first();
 
             if (! $ipRecord) {
                 $ipRecord = IpAddress::create([
-                    'vrf_id' => $subnet->vrf_id,
                     'subnet_id' => $subnet->id,
                     'ip_version' => $subnet->ip_version,
                     'address_hex' => $addressHex,
@@ -71,26 +66,20 @@ class ReserveIpAction
                 ]);
             }
 
-            $deviceId = !empty($data['device_id']) ? (int) $data['device_id'] : null;
-            if ($deviceId !== null) {
-                Device::findOrFail($deviceId);
-            }
+            $expiresAt = !empty($data['expires_at']) ? Carbon::parse($data['expires_at']) : null;
 
             $reservation = IpReservation::create([
                 'ip_address_id' => $ipRecord->id,
-                'reserved_for_device_id' => $deviceId,
                 'reserved_by_user_id' => $actor?->id ?? auth()->id(),
-                'reason' => trim($data['reason']),
-                'starts_at' => now(),
-                'expires_at' => !empty($data['expires_at']) ? Carbon::parse($data['expires_at']) : null,
-                'status' => ReservationStatus::ACTIVE,
+                'purpose' => trim($data['reason']),
+                'reserved_until' => $expiresAt,
             ]);
 
             AuditEvent::record(
                 eventType: 'ip.reserved',
-                reason: "Reserved {$ipRecord->address_text} in VRF #{$subnet->vrf_id} for '{$data['reason']}'",
+                reason: "Reserved IP {$ipRecord->address_text}: {$data['reason']}",
                 subject: $ipRecord,
-                after: $reservation->toArray(),
+                after: $ipRecord->toArray(),
                 actor: $actor
             );
 
@@ -98,4 +87,3 @@ class ReserveIpAction
         });
     }
 }
-

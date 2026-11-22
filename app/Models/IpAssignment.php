@@ -16,13 +16,15 @@ class IpAssignment extends Model
 
     protected $fillable = [
         'ip_address_id',
-        'interface_id',
-        'assigned_at',
-        'released_at',
+        'assigned_to',
+        'hostname',
+        'mac_address',
         'assignment_method',
         'assigned_by_user_id',
+        'assigned_at',
+        'released_at',
         'release_reason',
-        'request_id',
+        'notes',
         'idempotency_key',
     ];
 
@@ -39,24 +41,8 @@ class IpAssignment extends Model
         return $this->belongsTo(IpAddress::class);
     }
 
-    public function interface(): BelongsTo
-    {
-        return $this->belongsTo(DeviceInterface::class, 'interface_id');
-    }
-
-    public function deviceInterface(): BelongsTo
-    {
-        return $this->interface();
-    }
-
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by_user_id');
     }
-
-    public function isActive(): bool
-    {
-        return $this->released_at === null;
-    }
 }
-

@@ -67,6 +67,11 @@ final class IpPrefix
         return new self(IpAddress::parse($ip), $prefixLength);
     }
 
+    public static function fromBigIntegerAndLength(BigInteger $int, int $prefixLength, int $version): self
+    {
+        return new self(IpAddress::fromBigInteger($int, $version), $prefixLength);
+    }
+
     public function version(): int
     {
         return $this->version;

@@ -26,3 +26,4 @@ class SecurityHeaders
         return $response;
     }
 }
+

@@ -20,14 +20,11 @@ class DeleteSubnetAction
             ]);
         }
 
-        // Check if IP records exist (in Stage 4)
-        if (DB::getSchemaBuilder()->hasTable('ip_addresses')) {
-            $ipCount = DB::table('ip_addresses')->where('subnet_id', $subnet->id)->count();
-            if ($ipCount > 0) {
-                throw ValidationException::withMessages([
-                    'subnet' => "Cannot delete subnet '{$subnet->cidr}' because {$ipCount} IP address record(s) are allocated within it.",
-                ]);
-            }
+        $ipCount = $subnet->ipAddresses()->count();
+        if ($ipCount > 0) {
+            throw ValidationException::withMessages([
+                'subnet' => "Cannot delete subnet '{$subnet->cidr}' because {$ipCount} IP address record(s) are allocated within it.",
+            ]);
         }
 
         DB::transaction(function () use ($subnet) {
@@ -36,7 +33,7 @@ class DeleteSubnetAction
 
             AuditEvent::record(
                 eventType: 'subnet.deleted',
-                reason: "Deleted subnet {$subnet->cidr} ({$subnet->name}) from VRF #{$subnet->vrf_id}",
+                reason: "Deleted subnet {$subnet->cidr} ({$subnet->name})",
                 subject: $subnet,
                 before: $before
             );

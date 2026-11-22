@@ -18,10 +18,9 @@ class DeleteVlanAction
 
             AuditEvent::record(
                 eventType: 'vlan.deleted',
-                reason: "Deleted VLAN {$vlan->vlan_id} ({$vlan->name}) from L2 domain #{$vlan->l2_domain_id}",
+                reason: "Deleted VLAN {$vlan->vlan_id} ({$vlan->name})",
                 before: $before
             );
         });
     }
 }
-

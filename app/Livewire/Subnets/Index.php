@@ -10,11 +10,8 @@ use App\Actions\AddressSpace\UpdateSubnetAction;
 use App\Domain\AddressSpace\Enums\SubnetStatus;
 use App\Domain\AddressSpace\Enums\SubnetType;
 use App\Domain\AddressSpace\ValueObjects\IpPrefix;
-use App\Models\Department;
-use App\Models\Site;
 use App\Models\Subnet;
 use App\Models\Vlan;
-use App\Models\Vrf;
 use App\Services\AddressSpace\SubnetHierarchyService;
 use App\Services\IPMath\IpCalculatorService;
 use Illuminate\Support\Facades\Gate;
@@ -35,7 +32,6 @@ class Index extends Component
 
     // Filters
     public string $search = '';
-    public string $vrfFilter = 'all';
     public string $familyFilter = 'all';
     public string $typeFilter = 'all';
 
@@ -45,10 +41,7 @@ class Index extends Component
     public ?int $selectedSubnetId = null;
 
     // Form inputs
-    public ?int $subnet_vrf_id = null;
     public ?int $subnet_parent_id = null;
-    public ?int $subnet_site_id = null;
-    public ?int $subnet_department_id = null;
     public ?int $subnet_vlan_id = null;
     public string $subnet_name = '';
     public string $subnet_cidr = '';
@@ -73,25 +66,19 @@ class Index extends Component
     // Delete confirmation
     public bool $showDeleteModal = false;
 
-    public function mount(): void
-    {
-        // Default to default VRF if present
-        $defaultVrf = Vrf::where('is_default', true)->first();
-        if ($defaultVrf) {
-            $this->vrfFilter = (string) $defaultVrf->id;
-            $this->subnet_vrf_id = $defaultVrf->id;
-        }
-    }
-
     public function updatingSearch(): void
     {
         $this->resetPage();
     }
 
-    public function updatingVrfFilter(): void
+    public function updatingFamilyFilter(): void
     {
         $this->resetPage();
-        $this->selectedParentId = null;
+    }
+
+    public function updatingTypeFilter(): void
+    {
+        $this->resetPage();
     }
 
     public function drillDown(?int $parentId): void
@@ -100,21 +87,11 @@ class Index extends Component
         $this->resetPage();
     }
 
-    // --- Subnet CRUD ---
-
     public function openCreateModal(?int $parentId = null): void
     {
-        Gate::authorize('create', Subnet::class);
-
         $this->isEditing = false;
         $this->selectedSubnetId = null;
-        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_description', 'subnet_vlan_id', 'subnet_department_id', 'subnet_site_id']);
-
-        if ($this->vrfFilter !== 'all') {
-            $this->subnet_vrf_id = (int) $this->vrfFilter;
-        } else {
-            $this->subnet_vrf_id = Vrf::first()?->id;
-        }
+        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_description', 'subnet_vlan_id']);
 
         $this->subnet_parent_id = $parentId ?? $this->selectedParentId;
         $this->subnet_type = ($parentId !== null) ? 'assignable' : 'aggregate';
@@ -127,14 +104,10 @@ class Index extends Component
     public function openEditModal(int $id): void
     {
         $subnet = Subnet::findOrFail($id);
-        Gate::authorize('update', $subnet);
 
         $this->isEditing = true;
         $this->selectedSubnetId = $subnet->id;
-        $this->subnet_vrf_id = $subnet->vrf_id;
         $this->subnet_parent_id = $subnet->parent_id;
-        $this->subnet_site_id = $subnet->site_id;
-        $this->subnet_department_id = $subnet->department_id;
         $this->subnet_vlan_id = $subnet->vlan_id;
         $this->subnet_name = $subnet->name;
         $this->subnet_cidr = $subnet->cidr;
@@ -149,27 +122,21 @@ class Index extends Component
     public function saveSubnet(CreateSubnetAction $createAction, UpdateSubnetAction $updateAction): void
     {
         $this->validate([
-            'subnet_vrf_id' => ['required', 'integer', 'exists:vrfs,id'],
             'subnet_parent_id' => ['nullable', 'integer', 'exists:subnets,id'],
             'subnet_name' => ['required', 'string', 'max:128'],
             'subnet_cidr' => ['required', 'string', 'regex:/^([0-9a-fA-F:\.]+)\/([0-9]+)$/'],
             'subnet_type' => ['required', 'string'],
             'subnet_status' => ['required', 'in:planned,active,deprecated,retired'],
-            'subnet_site_id' => ['nullable', 'integer', 'exists:sites,id'],
-            'subnet_department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'subnet_vlan_id' => ['nullable', 'integer', 'exists:vlans,id'],
         ]);
 
         try {
             if ($this->isEditing) {
                 $subnet = Subnet::findOrFail($this->selectedSubnetId);
-                Gate::authorize('update', $subnet);
 
                 $updateAction->execute($subnet, [
                     'name' => $this->subnet_name,
                     'parent_id' => $this->subnet_parent_id,
-                    'site_id' => $this->subnet_site_id,
-                    'department_id' => $this->subnet_department_id,
                     'vlan_id' => $this->subnet_vlan_id,
                     'subnet_type' => SubnetType::from($this->subnet_type),
                     'status' => SubnetStatus::from($this->subnet_status),
@@ -179,13 +146,8 @@ class Index extends Component
 
                 session()->flash('success', "Subnet '{$subnet->cidr}' updated successfully.");
             } else {
-                Gate::authorize('create', Subnet::class);
-
                 $createAction->execute([
-                    'vrf_id' => (int) $this->subnet_vrf_id,
                     'parent_id' => $this->subnet_parent_id,
-                    'site_id' => $this->subnet_site_id,
-                    'department_id' => $this->subnet_department_id,
                     'vlan_id' => $this->subnet_vlan_id,
                     'name' => $this->subnet_name,
                     'cidr' => $this->subnet_cidr,
@@ -230,8 +192,6 @@ class Index extends Component
     public function confirmDelete(int $id): void
     {
         $subnet = Subnet::findOrFail($id);
-        Gate::authorize('delete', $subnet);
-
         $this->selectedSubnetId = $subnet->id;
         $this->showDeleteModal = true;
     }
@@ -239,7 +199,6 @@ class Index extends Component
     public function deleteSubnet(DeleteSubnetAction $action): void
     {
         $subnet = Subnet::findOrFail($this->selectedSubnetId);
-        Gate::authorize('delete', $subnet);
 
         try {
             $action->execute($subnet);
@@ -250,8 +209,6 @@ class Index extends Component
 
         $this->showDeleteModal = false;
     }
-
-    // --- Calculator Tool ---
 
     public function openCalculator(?string $cidr = null): void
     {
@@ -273,8 +230,6 @@ class Index extends Component
             $this->calcResults = null;
         }
     }
-
-    // --- Split Preview Tool ---
 
     public function openSplitModal(int $id): void
     {
@@ -304,16 +259,9 @@ class Index extends Component
 
     public function render()
     {
-        $vrfs = Vrf::orderBy('name')->get();
-        $sites = Site::orderBy('name')->get();
-        $departments = Department::orderBy('name')->get();
         $vlans = Vlan::orderBy('vlan_id')->get();
 
-        $query = Subnet::with(['vrf', 'site', 'vlan', 'department'])->withCount('children');
-
-        if ($this->vrfFilter !== 'all') {
-            $query->where('vrf_id', (int) $this->vrfFilter);
-        }
+        $query = Subnet::with('vlan')->withCount('children');
 
         if ($this->familyFilter !== 'all') {
             $query->where('ip_version', (int) $this->familyFilter);
@@ -341,15 +289,10 @@ class Index extends Component
         $subnets = $query->orderBy('start_hex')->paginate(12);
 
         $selectedParent = $this->selectedParentId ? Subnet::find($this->selectedParentId) : null;
-        $parentCandidates = Subnet::when($this->subnet_vrf_id, fn($q) => $q->where('vrf_id', $this->subnet_vrf_id))
-            ->where('subnet_type', SubnetType::AGGREGATE)
-            ->get();
+        $parentCandidates = Subnet::where('subnet_type', SubnetType::AGGREGATE)->get();
 
         return view('livewire.subnets.index', [
             'subnets' => $subnets,
-            'vrfs' => $vrfs,
-            'sites' => $sites,
-            'departments' => $departments,
             'vlans' => $vlans,
             'selectedParent' => $selectedParent,
             'parentCandidates' => $parentCandidates,

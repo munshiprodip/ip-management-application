@@ -1,519 +1,485 @@
 <div class="space-y-6">
-    <!-- Top Action & Navigation Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+    <!-- Header / Context Bar -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <div class="flex items-center space-x-2 text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <span>Address Space</span>
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-mono mb-1">
+                <a href="{{ route('dashboard') }}" class="hover:text-emerald-600">KYAMCH IPAM</a>
                 <span>/</span>
-                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">IP Explorer & Allocation</span>
+                <span class="text-slate-800 dark:text-slate-200 font-semibold">IP Explorer & Allocations</span>
             </div>
-            <h1 class="text-2xl font-bold text-slate-900 dark:text-white mt-1">IP Address Explorer & Allocations</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Virtual candidate window generator, atomic allocations, quarantine hold enforcement, and strict separation between authoritative allocation and observed network state.</p>
+            <h1 class="text-xl font-bold text-slate-900 dark:text-white">IP Address Explorer &amp; Allocations</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Authoritative host IP address allocation, quarantine management, and virtual candidate window explorer.
+            </p>
         </div>
 
-        <div class="flex items-center space-x-3">
-            @can('allocate', App\Models\IpAddress::class)
-                <button wire:click="openAllocateModal()"
-                        class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Allocate IP Address
-                </button>
-            @endcan
+        <div class="flex items-center gap-2">
+            <button
+                wire:click="openAllocateModal()"
+                type="button"
+                @if(!$selectedSubnetId) disabled @endif
+                class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Allocate IP Address
+            </button>
         </div>
     </div>
 
-    <!-- Notification Banners -->
-    @if (session()->has('success'))
-        <div class="p-4 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-            <span>{{ session('success') }}</span>
-            <button type="button" onclick="this.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700">&times;</button>
-        </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl text-sm text-rose-800 dark:text-rose-300 flex items-center justify-between">
-            <span>{{ session('error') }}</span>
-            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-700">&times;</button>
-        </div>
-    @endif
-
-    <!-- Context Selectors (VRF & Subnet) -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- VRF Selector -->
+    <!-- Subnet Selector & Status Filter Toolbar -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-wrap gap-3 items-center justify-between">
+        <div class="flex flex-wrap items-center gap-3">
             <div>
-                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                    VRF Routing Context
-                </label>
-                <select wire:model.live="selectedVrfId"
-                        class="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    @foreach ($vrfs as $vrf)
-                        <option value="{{ $vrf->id }}">{{ $vrf->name }} (RD: {{ $vrf->rd ?? 'None' }})</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- Subnet Selector -->
-            <div>
-                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                    Assignable Leaf Subnet
-                </label>
-                <select wire:model.live="selectedSubnetId"
-                        class="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    @forelse ($subnets as $sub)
+                <label class="block text-[11px] font-mono text-slate-500 uppercase mb-1">Target Subnet:</label>
+                <select
+                    wire:model.live="selectedSubnetId"
+                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-semibold focus:ring-2 focus:ring-emerald-500"
+                >
+                    @forelse($subnets as $sub)
                         <option value="{{ $sub->id }}">{{ $sub->cidr }} — {{ $sub->name }}</option>
                     @empty
-                        <option value="">No assignable subnets configured in this VRF</option>
+                        <option value="">No assignable subnets available</option>
                     @endforelse
                 </select>
             </div>
+
+            <div>
+                <label class="block text-[11px] font-mono text-slate-500 uppercase mb-1">Status Filter:</label>
+                <select
+                    wire:model.live="statusFilter"
+                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                >
+                    <option value="all">All Address Candidates</option>
+                    <option value="unassigned">Available (Unassigned)</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="reserved">Reserved</option>
+                    <option value="quarantined">Quarantined</option>
+                </select>
+            </div>
         </div>
 
-        @if ($selectedSubnet)
-            <!-- Subnet Metadata & Utilization Bar -->
-            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
-                <div class="flex items-center space-x-4">
-                    <div>
-                        <span class="text-slate-400 uppercase font-semibold">Subnet:</span>
-                        <strong class="font-mono text-slate-900 dark:text-white ml-1">{{ $selectedSubnet->cidr }}</strong>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 uppercase font-semibold">Usable Hosts:</span>
-                        <span class="font-mono text-slate-700 dark:text-slate-300 ml-1">{{ $selectedSubnet->usableAddressesFormatted() }}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 uppercase font-semibold">Allocated IPs:</span>
-                        <span class="font-mono text-indigo-600 dark:text-indigo-400 font-bold ml-1">{{ $selectedSubnet->allocatedCount() }}</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 uppercase font-semibold">Campus:</span>
-                        <span class="text-slate-700 dark:text-slate-300 ml-1">{{ $selectedSubnet->site?->name ?? 'General' }}</span>
-                    </div>
-                </div>
-
-                <!-- Window Pagination Controls -->
-                <div class="flex items-center space-x-2">
-                    <button wire:click="previousPage"
-                            @if ($currentPage <= 1) disabled @endif
-                            class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 rounded text-xs font-medium transition">
-                        &larr; Prev {{ $perPage }}
-                    </button>
-                    <span class="text-xs font-mono text-slate-500">
-                        Page {{ $windowData['current_page'] }} of {{ max(1, $windowData['last_page']) }}
+        @if($selectedSubnet)
+            <div class="flex items-center gap-3 text-xs font-mono">
+                <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                    {{ $selectedSubnet->usableAddressesFormatted() }} Usable Hosts
+                </span>
+                @if($selectedSubnet->vlan)
+                    <span class="px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        VLAN {{ $selectedSubnet->vlan->vlan_id }}
                     </span>
-                    <button wire:click="nextPage"
-                            @if ($currentPage >= $windowData['last_page']) disabled @endif
-                            class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-300 rounded text-xs font-medium transition">
-                        Next {{ $perPage }} &rarr;
-                    </button>
-                </div>
+                @endif
             </div>
         @endif
     </div>
 
-    <!-- Candidate Window Table -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden">
+    <!-- Candidate Window Grid / Table -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-slate-600 dark:text-slate-400">
-                <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                        <th class="px-5 py-3.5">IP Address</th>
-                        <th class="px-5 py-3.5">Classification</th>
-                        <th class="px-5 py-3.5">Authoritative Allocation</th>
-                        <th class="px-5 py-3.5">Observed Connectivity</th>
-                        <th class="px-5 py-3.5">Bound Host / Interface</th>
-                        <th class="px-5 py-3.5 text-right">Actions</th>
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-mono uppercase text-[11px]">
+                        <th class="py-3 px-4">Candidate IP</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Hostname / Assigned To</th>
+                        <th class="py-3 px-4">MAC Address</th>
+                        <th class="py-3 px-4">Pool / Range</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-xs">
-                    @forelse ($windowData['items'] as $item)
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
+                    @forelse($windowData['items'] as $item)
                         @php
-                            $allocStatus = $item['allocation_status'] instanceof App\Domain\AddressSpace\Enums\IpAllocationStatus
-                                ? $item['allocation_status']
-                                : App\Domain\AddressSpace\Enums\IpAllocationStatus::from($item['allocation_status']);
-                            $connStatus = $item['connectivity_status'] instanceof App\Domain\AddressSpace\Enums\IpConnectivityStatus
-                                ? $item['connectivity_status']
-                                : App\Domain\AddressSpace\Enums\IpConnectivityStatus::from($item['connectivity_status']);
-                            $classif = $item['classification'] instanceof App\Domain\AddressSpace\Enums\IpClassification
-                                ? $item['classification']
-                                : App\Domain\AddressSpace\Enums\IpClassification::from($item['classification']);
+                            $statusStr = is_object($item['status']) ? $item['status']->value : (string) $item['status'];
                         @endphp
-                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
-                            <!-- IP Address -->
-                            <td class="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
-                                <div class="flex items-center space-x-2">
-                                    <span>{{ $item['address'] }}</span>
-                                    @if ($item['hostname'])
-                                        <span class="text-[11px] font-normal text-slate-400 font-sans">({{ $item['hostname'] }})</span>
-                                    @endif
-                                </div>
-                            </td>
-
-                            <!-- Classification -->
-                            <td class="px-5 py-3.5 font-sans">
-                                <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $classif->badgeClasses() }}">
-                                    {{ $classif->label() }}
+                        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition">
+                            <td class="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded {{ $statusStr === 'assigned' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : ($statusStr === 'reserved' ? 'bg-amber-50 text-amber-700' : ($statusStr === 'quarantined' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200')) }}">
+                                    {{ $item['ip_text'] }}
                                 </span>
                             </td>
-
-                            <!-- Authoritative Allocation Status -->
-                            <td class="px-5 py-3.5 font-sans">
-                                <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $allocStatus->badgeClasses() }}">
-                                    {{ $allocStatus->label() }}
-                                </span>
-                                @if ($allocStatus === App\Domain\AddressSpace\Enums\IpAllocationStatus::QUARANTINED && $item['quarantined_until'])
-                                    <div class="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
-                                        Hold until: {{ \Carbon\Carbon::parse($item['quarantined_until'])->toFormattedDateString() }}
-                                    </div>
-                                @endif
-                            </td>
-
-                            <!-- Observed Connectivity Status (SEPARATE COLUMN!) -->
-                            <td class="px-5 py-3.5 font-sans">
-                                <span class="px-2 py-0.5 text-[11px] font-medium rounded border {{ $connStatus->badgeClasses() }}">
-                                    {{ $connStatus->label() }}
-                                </span>
-                            </td>
-
-                            <!-- Bound Host / Interface -->
-                            <td class="px-5 py-3.5 font-sans">
-                                @if (!empty($item['current_assignment']) && !empty($item['current_assignment']->interface))
-                                    @php $iface = $item['current_assignment']->interface; @endphp
-                                    <div class="font-semibold text-slate-900 dark:text-white">
-                                        {{ $iface->device?->name ?? 'Unknown Device' }}
-                                    </div>
-                                    <div class="text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
-                                        Interface: {{ $iface->name }}
-                                        @if ($iface->mac_address)
-                                            <span class="text-slate-400">&bull; {{ $iface->mac_address }}</span>
-                                        @endif
-                                    </div>
-                                @elseif ($item['description'])
-                                    <span class="text-xs text-slate-500 italic">{{ $item['description'] }}</span>
+                            <td class="py-3 px-4">
+                                @if($statusStr === 'assigned')
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Assigned
+                                    </span>
+                                @elseif($statusStr === 'reserved')
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Reserved
+                                    </span>
+                                @elseif($statusStr === 'quarantined')
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Quarantined
+                                    </span>
                                 @else
-                                    <span class="text-slate-400 italic">None</span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Available
+                                    </span>
                                 @endif
                             </td>
-
-                            <!-- Actions -->
-                            <td class="px-5 py-3.5 text-right font-sans space-x-1.5">
-                                @if ($allocStatus === App\Domain\AddressSpace\Enums\IpAllocationStatus::UNASSIGNED)
-                                    @can('allocate', App\Models\IpAddress::class)
-                                        <button wire:click="openAllocateModal('{{ $item['address'] }}')"
-                                                class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded transition">
+                            <td class="py-3 px-4">
+                                @if($item['hostname'] || $item['assigned_to'])
+                                    <div class="font-medium text-slate-800 dark:text-slate-200">{{ $item['hostname'] ?? '—' }}</div>
+                                    @if($item['assigned_to'])
+                                        <div class="text-[11px] text-slate-500">{{ $item['assigned_to'] }}</div>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400 font-mono text-[11px]">—</span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                                {{ $item['mac_address'] ?? '—' }}
+                            </td>
+                            <td class="py-3 px-4">
+                                @if($item['pool_name'])
+                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-mono">
+                                        {{ $item['pool_name'] }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-400 font-mono text-[11px]">—</span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    @if($statusStr === 'unassigned')
+                                        <button
+                                            wire:click="openAllocateModal('{{ $item['ip_text'] }}')"
+                                            type="button"
+                                            class="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-semibold transition"
+                                        >
                                             Allocate
                                         </button>
-                                        <button wire:click="openReserveModal('{{ $item['address'] }}')"
-                                                class="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded transition">
+                                        <button
+                                            wire:click="openReserveModal('{{ $item['ip_text'] }}')"
+                                            type="button"
+                                            class="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-[11px] font-semibold transition"
+                                        >
                                             Reserve
                                         </button>
-                                    @endcan
-                                @elseif ($allocStatus === App\Domain\AddressSpace\Enums\IpAllocationStatus::ASSIGNED && $item['id'])
-                                    @can('transfer', App\Models\IpAddress::class)
-                                        <button wire:click="openTransferModal({{ $item['id'] }})"
-                                                class="px-2 py-1 text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-medium transition">
-                                            Transfer
-                                        </button>
-                                    @endcan
-                                    @can('release', App\Models\IpAddress::class)
-                                        <button wire:click="openReleaseModal({{ $item['id'] }})"
-                                                class="px-2 py-1 text-xs text-rose-600 hover:text-rose-800 dark:text-rose-400 font-medium transition">
+                                    @elseif($statusStr === 'assigned' && $item['id'])
+                                        <button
+                                            wire:click="openReleaseModal({{ $item['id'] }})"
+                                            type="button"
+                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-semibold transition"
+                                        >
                                             Release
                                         </button>
-                                    @endcan
-                                    <button wire:click="viewDetails({{ $item['id'] }})"
-                                            class="px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 font-medium transition">
-                                        History
-                                    </button>
-                                @elseif ($item['id'])
-                                    <button wire:click="viewDetails({{ $item['id'] }})"
-                                            class="px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 font-medium transition">
-                                        Details
-                                    </button>
-                                @endif
+                                        <button
+                                            wire:click="viewDetails({{ $item['id'] }})"
+                                            type="button"
+                                            class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition"
+                                        >
+                                            Details
+                                        </button>
+                                    @elseif($item['id'])
+                                        <button
+                                            wire:click="viewDetails({{ $item['id'] }})"
+                                            type="button"
+                                            class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition"
+                                        >
+                                            Details
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-slate-400 font-sans">
-                                Select an assignable subnet above to explore available IP addresses.
+                            <td colspan="6" class="py-8 px-4 text-center text-slate-400">
+                                @if($selectedSubnet)
+                                    No addresses matching criteria in candidate window.
+                                @else
+                                    Please select an assignable subnet above to view candidate IP address window.
+                                @endif
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Bar -->
+        @if($windowData['total'] > 0)
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-500">
+                    Showing page {{ $windowData['current_page'] }} of {{ $windowData['last_page'] }} (Total candidate addresses: {{ number_format($windowData['total']) }})
+                </span>
+                <div class="flex items-center gap-2">
+                    <button
+                        wire:click="previousPage"
+                        type="button"
+                        @if($currentPage <= 1) disabled @endif
+                        class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40"
+                    >
+                        &larr; Previous 50
+                    </button>
+                    <button
+                        wire:click="nextPage"
+                        type="button"
+                        @if($currentPage >= $windowData['last_page']) disabled @endif
+                        class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40"
+                    >
+                        Next 50 &rarr;
+                    </button>
+                </div>
+            </div>
+        @endif
     </div>
 
-    <!-- ALLOCATE IP MODAL -->
-    @if ($showAllocateModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl p-6 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Authoritative IP Allocation</h3>
-                    <button wire:click="$set('showAllocateModal', false)" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+    <!-- Allocate Modal -->
+    @if($showAllocateModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white">
+                        Allocate IP Address
+                    </h3>
+                    <button wire:click="$set('showAllocateModal', false)" type="button" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
 
                 <form wire:submit="saveAllocation" class="space-y-4 text-xs">
-                    <!-- IP Address Field -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Target IP Address *</label>
-                            <button type="button" wire:click="suggestNextFree" class="text-indigo-600 dark:text-indigo-400 hover:underline">
-                                Suggest Next Free IP
+                            <label class="font-medium text-slate-700 dark:text-slate-300">Target IP Address *</label>
+                            <button wire:click="suggestNextFree" type="button" class="text-[11px] text-emerald-600 font-semibold">
+                                Suggest Free
                             </button>
                         </div>
-                        <input type="text" wire:model="alloc_ip" placeholder="e.g. 10.10.10.15"
-                               class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @error('alloc_ip') <span class="text-rose-500 mt-1 block">{{ $message }}</span> @enderror
+                        <input
+                            wire:model="alloc_ip"
+                            type="text"
+                            placeholder="10.10.1.5"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-emerald-500"
+                        />
+                        @error('alloc_ip') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                     </div>
 
-                    <!-- Classification -->
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Classification *</label>
-                        <select wire:model="alloc_classification" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            @foreach (App\Domain\AddressSpace\Enums\IpClassification::cases() as $cl)
-                                <option value="{{ $cl->value }}">{{ $cl->label() }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Hostname -->
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Hostname / FQDN</label>
-                        <input type="text" wire:model="alloc_hostname" placeholder="e.g. ct01.rad.kyamch.local"
-                               class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono">
-                    </div>
-
-                    <!-- Device Binding -->
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Target Hardware Device</label>
-                        <select wire:model.live="alloc_device_id" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            <option value="">Select Device...</option>
-                            @foreach ($devices as $d)
-                                <option value="{{ $d->id }}">{{ $d->name }} ({{ $d->code }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Interface Binding -->
-                    @if ($alloc_device_id)
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Target Network Interface</label>
-                            <select wire:model="alloc_interface_id" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono">
-                                <option value="">Select Interface...</option>
-                                @foreach ($interfaces as $iface)
-                                    <option value="{{ $iface->id }}">{{ $iface->name }} (MAC: {{ $iface->mac_address ?? 'None' }})</option>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Classification *</label>
+                            <select
+                                wire:model="alloc_classification"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                            >
+                                @foreach($classifications as $c)
+                                    <option value="{{ $c->value }}">{{ $c->label() }}</option>
                                 @endforeach
                             </select>
                         </div>
-                    @endif
 
-                    <!-- Description -->
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Authoritative Description</label>
-                        <input type="text" wire:model="alloc_description" placeholder="e.g. Primary PACs modality imaging link"
-                               class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
+                        <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label>
+                            <input
+                                wire:model="alloc_mac_address"
+                                type="text"
+                                placeholder="00:1A:2B:3C:4D:5E"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                            />
+                        </div>
                     </div>
 
-                    <div class="border-t border-slate-100 dark:border-slate-800 pt-4 flex justify-end space-x-3">
-                        <button type="button" wire:click="$set('showAllocateModal', false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm rounded-lg">Cancel</button>
-                        <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm">Commit Allocation</button>
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Hostname (FQDN or short)</label>
+                        <input
+                            wire:model="alloc_hostname"
+                            type="text"
+                            placeholder="e.g. icu-mon-01.kyamch.local"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned To (Device / System / Person)</label>
+                        <input
+                            wire:model="alloc_assigned_to"
+                            type="text"
+                            placeholder="e.g. ICU Bed 4 Monitor"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Description / Notes</label>
+                        <textarea
+                            wire:model="alloc_description"
+                            rows="2"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+                        <button wire:click="$set('showAllocateModal', false)" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">
+                            Confirm Allocation
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     @endif
 
-    <!-- RELEASE IP MODAL -->
-    @if ($showReleaseModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl p-6 space-y-4">
-                <div class="flex items-center space-x-3 text-rose-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Release & Quarantine IP</h3>
-                </div>
+    <!-- Release Modal -->
+    @if($showReleaseModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-5 space-y-4 text-xs">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 text-rose-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Release IP Address</span>
+                </h3>
 
-                <p class="text-xs text-slate-600 dark:text-slate-400">
-                    Releasing an IP will close the active assignment and place the address into mandatory post-release quarantine to prevent stale ARP and DHCP conflicts.
-                </p>
-
-                <div class="space-y-3 text-xs">
+                <div class="space-y-3">
                     <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Quarantine Hold Duration</label>
-                        <select wire:model="release_quarantine_days" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            <option value="3">3 Days (Standard Hospital Policy)</option>
-                            <option value="7">7 Days (Clinical / Medical Hold)</option>
-                            <option value="0">0 Days (Immediate Release - Not Recommended)</option>
-                        </select>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Post-Release Quarantine (Days):</label>
+                        <input
+                            wire:model="release_quarantine_days"
+                            type="number"
+                            min="0"
+                            max="30"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                        />
+                        <p class="text-[10px] text-slate-400 mt-1">Sets cooling off period before address can be allocated again.</p>
                     </div>
 
                     <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Reason for Release *</label>
-                        <textarea wire:model="release_reason" rows="2" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"></textarea>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Release Reason *</label>
+                        <textarea
+                            wire:model="release_reason"
+                            rows="2"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        ></textarea>
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 pt-2">
-                    <button wire:click="$set('showReleaseModal', false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm rounded-lg">Cancel</button>
-                    <button wire:click="confirmRelease" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-lg">Confirm Release</button>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <button wire:click="$set('showReleaseModal', false)" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                        Cancel
+                    </button>
+                    <button wire:click="confirmRelease" type="button" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold">
+                        Confirm Release
+                    </button>
                 </div>
             </div>
         </div>
     @endif
 
-    <!-- TRANSFER IP MODAL -->
-    @if ($showTransferModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl p-6 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Atomic IP Address Transfer</h3>
-                    <button wire:click="$set('showTransferModal', false)" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-                </div>
+    <!-- Reserve Modal -->
+    @if($showReserveModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-5 space-y-4 text-xs">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 text-amber-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Reserve IP Address: {{ $reserve_ip }}</span>
+                </h3>
 
-                <p class="text-xs text-slate-600 dark:text-slate-400">
-                    Transfers ownership directly to another device interface in a single transaction without releasing the IP into the candidate pool.
-                </p>
-
-                <div class="space-y-3 text-xs">
+                <div class="space-y-3">
                     <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Target Device</label>
-                        <select wire:model.live="transfer_device_id" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                            <option value="">Select Destination Device...</option>
-                            @foreach ($devices as $d)
-                                <option value="{{ $d->id }}">{{ $d->name }} ({{ $d->code }})</option>
-                            @endforeach
-                        </select>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Reservation Reason *</label>
+                        <textarea
+                            wire:model="reserve_reason"
+                            rows="2"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        ></textarea>
                     </div>
 
-                    @if ($transfer_device_id)
-                        <div>
-                            <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Destination Interface *</label>
-                            <select wire:model="transfer_interface_id" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono">
-                                <option value="">Select Interface...</option>
-                                @foreach ($transferInterfaces as $iface)
-                                    <option value="{{ $iface->id }}">{{ $iface->name }} (MAC: {{ $iface->mac_address ?? 'None' }})</option>
-                                @endforeach
-                            </select>
-                            @error('transfer_interface_id') <span class="text-rose-500 mt-1 block">{{ $message }}</span> @enderror
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Expires On (Optional):</label>
+                        <input
+                            wire:model="reserve_expires_at"
+                            type="date"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                        />
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <button wire:click="$set('showReserveModal', false)" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                        Cancel
+                    </button>
+                    <button wire:click="confirmReservation" type="button" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold">
+                        Confirm Reservation
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Details Slide-over Drawer -->
+    @if($showDetailsDrawer && $detailIp)
+        <div class="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-xs flex justify-end">
+            <div class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl p-6 overflow-y-auto space-y-5 text-xs">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
+                    <div>
+                        <span class="text-[11px] font-mono text-slate-400">IP ADDRESS RECORD</span>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white font-mono mt-0.5">
+                            {{ $detailIp->address_text }}
+                        </h3>
+                    </div>
+                    <button wire:click="$set('showDetailsDrawer', false)" type="button" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <div class="space-y-3 font-mono text-xs">
+                    <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 space-y-1.5 border border-slate-200 dark:border-slate-800">
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Status:</span>
+                            <span class="font-bold uppercase text-emerald-600">{{ $detailIp->allocation_status->value }}</span>
                         </div>
-                    @endif
-
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Transfer Reason *</label>
-                        <input type="text" wire:model="transfer_reason" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                        @error('transfer_reason') <span class="text-rose-500 mt-1 block">{{ $message }}</span> @enderror
-                    </div>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-2">
-                    <button wire:click="$set('showTransferModal', false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm rounded-lg">Cancel</button>
-                    <button wire:click="confirmTransfer" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg">Execute Transfer</button>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- RESERVE IP MODAL -->
-    @if ($showReserveModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl p-6 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="text-base font-bold text-slate-900 dark:text-white">Reserve IP Address</h3>
-                    <button wire:click="$set('showReserveModal', false)" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-                </div>
-
-                <div class="space-y-3 text-xs">
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Target IP</label>
-                        <input type="text" wire:model="reserve_ip" readonly class="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-mono font-bold">
-                    </div>
-
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Reservation Reason *</label>
-                        <input type="text" wire:model="reserve_reason" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                    </div>
-
-                    <div>
-                        <label class="block font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Expiration Date (Optional)</label>
-                        <input type="date" wire:model="reserve_expires_at" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm">
-                    </div>
-                </div>
-
-                <div class="flex justify-end space-x-3 pt-2">
-                    <button wire:click="$set('showReserveModal', false)" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm rounded-lg">Cancel</button>
-                    <button wire:click="confirmReservation" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg">Confirm Reservation</button>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- DETAILS & ASSIGNMENT HISTORY SLIDE-OVER -->
-    @if ($showDetailsDrawer && $detailIp)
-        <div class="fixed inset-0 z-50 overflow-hidden bg-slate-900/50 backdrop-blur-xs flex justify-end">
-            <div class="w-full max-w-xl bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
-                <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between bg-slate-50/50 dark:bg-slate-800/30">
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span class="px-2 py-0.5 text-xs font-mono font-medium rounded border {{ $detailIp->allocation_status->badgeClasses() }}">
-                                {{ $detailIp->allocation_status->label() }}
-                            </span>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Subnet:</span>
+                            <span>{{ $detailIp->subnet->cidr }}</span>
                         </div>
-                        <h2 class="text-xl font-bold font-mono text-slate-900 dark:text-white mt-2">{{ $detailIp->address_text }}</h2>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">Hex: {{ $detailIp->address_hex }} &bull; VRF: {{ $detailIp->vrf->name }}</div>
-                    </div>
-                    <button wire:click="$set('showDetailsDrawer', false)" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">&times;</button>
-                </div>
-
-                <div class="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
-                    <div>
-                        <h4 class="font-bold text-slate-400 uppercase tracking-wider mb-2">Current Active Ownership</h4>
-                        @if ($detailIp->currentAssignment && $detailIp->currentAssignment->interface)
-                            @php $curr = $detailIp->currentAssignment; @endphp
-                            <div class="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg space-y-1">
-                                <div class="font-bold text-sm text-slate-900 dark:text-white">{{ $curr->interface->device?->name }}</div>
-                                <div class="text-slate-500 font-mono">Interface: {{ $curr->interface->name }} (MAC: {{ $curr->interface->mac_address }})</div>
-                                <div class="text-slate-400 text-[11px]">Assigned At: {{ $curr->assigned_at->toDayDateTimeString() }}</div>
-                            </div>
-                        @else
-                            <div class="p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 text-center">
-                                No active host interface currently bound to this address.
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Hostname:</span>
+                            <span>{{ $detailIp->hostname ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">MAC Address:</span>
+                            <span>{{ $detailIp->mac_address ?? '—' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Assigned To:</span>
+                            <span>{{ $detailIp->assigned_to ?? '—' }}</span>
+                        </div>
+                        @if($detailIp->quarantined_until)
+                            <div class="flex justify-between text-purple-600">
+                                <span>Quarantine Until:</span>
+                                <span>{{ $detailIp->quarantined_until->toDateTimeString() }}</span>
                             </div>
                         @endif
                     </div>
+                </div>
 
-                    <div>
-                        <h4 class="font-bold text-slate-400 uppercase tracking-wider mb-2">Assignment Timeline & History (T-012, T-013)</h4>
-                        <div class="space-y-3">
-                            @forelse ($detailIp->assignments()->latest('id')->get() as $hist)
-                                <div class="p-3 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 rounded-lg space-y-1">
-                                    <div class="flex items-center justify-between">
-                                        <span class="font-semibold text-slate-900 dark:text-white">
-                                            {{ $hist->interface?->device?->name ?? 'Interface #' . $hist->interface_id }} [{{ $hist->interface?->name }}]
-                                        </span>
-                                        <span class="text-[10px] text-slate-400">{{ $hist->assigned_at->toFormattedDateString() }}</span>
-                                    </div>
-                                    <div class="text-[11px] text-slate-500">Method: {{ $hist->assignment_method }}</div>
-                                    @if ($hist->released_at)
-                                        <div class="text-[11px] text-rose-600 dark:text-rose-400 font-mono">
-                                            Released: {{ $hist->released_at->toFormattedDateString() }} &bull; {{ $hist->release_reason }}
-                                        </div>
-                                    @else
-                                        <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold font-mono">
-                                            CURRENT ACTIVE ASSIGNMENT
-                                        </div>
-                                    @endif
+                <!-- Assignment History -->
+                <div>
+                    <h4 class="font-semibold text-slate-900 dark:text-white mb-2">Assignment History</h4>
+                    <div class="space-y-2">
+                        @forelse($detailIp->assignments as $asgn)
+                            <div class="p-2.5 rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-mono">
+                                <div class="flex justify-between font-semibold">
+                                    <span>{{ $asgn->assigned_to ?? 'Host' }}</span>
+                                    <span class="{{ $asgn->released_at ? 'text-slate-400' : 'text-emerald-600' }}">
+                                        {{ $asgn->released_at ? 'RELEASED' : 'ACTIVE' }}
+                                    </span>
                                 </div>
-                            @empty
-                                <div class="text-slate-400 italic">No historical assignment records.</div>
-                            @endforelse
-                        </div>
+                                <div class="text-slate-500 mt-1">
+                                    Assigned: {{ $asgn->assigned_at->toDateTimeString() }}
+                                </div>
+                                @if($asgn->released_at)
+                                    <div class="text-slate-500">
+                                        Released: {{ $asgn->released_at->toDateTimeString() }} ({{ $asgn->release_reason }})
+                                    </div>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="text-slate-400">No previous assignments recorded.</p>
+                        @endforelse
                     </div>
                 </div>
 
-                <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-end">
-                    <button wire:click="$set('showDetailsDrawer', false)" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg">Close</button>
+                <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                    <button wire:click="$set('showDetailsDrawer', false)" type="button" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold">
+                        Close Drawer
+                    </button>
                 </div>
             </div>
         </div>

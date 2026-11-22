@@ -6,12 +6,12 @@ namespace App\Models;
 
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
-use App\Domain\AddressSpace\Enums\IpConnectivityStatus;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class IpAddress extends Model
 {
@@ -20,21 +20,19 @@ class IpAddress extends Model
     protected $table = 'ip_addresses';
 
     protected $fillable = [
-        'vrf_id',
         'subnet_id',
         'ip_version',
         'address_hex',
         'address_text',
         'allocation_status',
-        'connectivity_status',
         'classification',
-        'current_assignment_id',
         'hostname',
-        'fqdn',
+        'mac_address',
+        'assigned_to',
         'description',
+        'assigned_at',
         'quarantined_until',
         'quarantine_reason',
-        'last_reconciled_at',
     ];
 
     protected function casts(): array
@@ -42,16 +40,10 @@ class IpAddress extends Model
         return [
             'ip_version' => 'integer',
             'allocation_status' => IpAllocationStatus::class,
-            'connectivity_status' => IpConnectivityStatus::class,
             'classification' => IpClassification::class,
+            'assigned_at' => 'datetime',
             'quarantined_until' => 'datetime',
-            'last_reconciled_at' => 'datetime',
         ];
-    }
-
-    public function vrf(): BelongsTo
-    {
-        return $this->belongsTo(Vrf::class);
     }
 
     public function subnet(): BelongsTo
@@ -59,14 +51,14 @@ class IpAddress extends Model
         return $this->belongsTo(Subnet::class);
     }
 
-    public function currentAssignment(): BelongsTo
-    {
-        return $this->belongsTo(IpAssignment::class, 'current_assignment_id');
-    }
-
     public function assignments(): HasMany
     {
         return $this->hasMany(IpAssignment::class);
+    }
+
+    public function currentAssignment(): HasOne
+    {
+        return $this->hasOne(IpAssignment::class)->whereNull('released_at')->latestOfMany();
     }
 
     public function reservations(): HasMany
@@ -85,7 +77,6 @@ class IpAddress extends Model
             return true;
         }
 
-        // If in quarantine, check if quarantine expired
         if ($this->allocation_status === IpAllocationStatus::QUARANTINED && $this->quarantined_until !== null) {
             return $this->quarantined_until->isPast();
         }
@@ -99,16 +90,11 @@ class IpAddress extends Model
             return false;
         }
 
-        if ($this->quarantined_until === null) {
-            return true;
-        }
-
-        return ! $this->quarantined_until->isPast();
+        return $this->quarantined_until === null || $this->quarantined_until->isFuture();
     }
 
     public function toValueObject(): IpAddressVO
     {
-        return IpAddressVO::fromHex($this->address_hex, $this->ip_version);
+        return IpAddressVO::parse($this->address_text);
     }
 }
-

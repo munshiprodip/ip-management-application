@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 class UpdateVlanAction
 {
     /**
-     * @param array{vlan_id?: int, name?: string, description?: ?string, security_zone?: string|VlanSecurityZone, status?: string|VlanStatus} $data
+     * @param array{vlan_id?: int, name?: string, description?: ?string, security_zone?: string|VlanSecurityZone, status?: string|VlanStatus, is_restricted?: bool} $data
      */
     public function execute(Vlan $vlan, array $data): Vlan
     {
@@ -26,12 +26,9 @@ class UpdateVlanAction
                 ]);
             }
 
-            if (Vlan::where('l2_domain_id', $vlan->l2_domain_id)
-                ->where('vlan_id', $vlanId)
-                ->where('id', '!=', $vlan->id)
-                ->exists()) {
+            if (Vlan::where('vlan_id', $vlanId)->where('id', '!=', $vlan->id)->exists()) {
                 throw ValidationException::withMessages([
-                    'vlan_id' => "VLAN {$vlanId} already exists in this Layer 2 broadcast domain.",
+                    'vlan_id' => "VLAN {$vlanId} already exists.",
                 ]);
             }
             $data['vlan_id'] = $vlanId;
@@ -54,4 +51,3 @@ class UpdateVlanAction
         });
     }
 }
-

@@ -19,7 +19,10 @@ class EnterpriseShellTest extends TestCase
         $response = $this->get('/subnets');
         $response->assertRedirect('/login');
 
-        $response = $this->get('/vrfs');
+        $response = $this->get('/vlans');
+        $response->assertRedirect('/login');
+
+        $response = $this->get('/ip-addresses');
         $response->assertRedirect('/login');
     }
 
@@ -33,50 +36,33 @@ class EnterpriseShellTest extends TestCase
         $response = $this->actingAs($user)->get('/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSee('Enterprise IPAM Control Center');
+        $response->assertSee('Network & IP Address Management');
         $response->assertSee('KYAMCH IPAM');
-        $response->assertSee('SAFE / OFF');
-        $response->assertSee('LOCKED');
 
-        // Check for all 10 core navigation links in the enterprise shell
+        // Check for 4 core navigation links
         $response->assertSee(route('dashboard'));
         $response->assertSee(route('subnets.index'));
-        $response->assertSee(route('vrfs.index'));
         $response->assertSee(route('vlans.index'));
         $response->assertSee(route('ip-addresses.index'));
-        $response->assertSee(route('devices.index'));
-        $response->assertSee(route('requests.index'));
-        $response->assertSee(route('discovery.index'));
-        $response->assertSee(route('alerts.index'));
-        $response->assertSee(route('reports.index'));
-        $response->assertSee(route('admin.index'));
     }
 
-    public function test_all_enterprise_module_screens_render_cleanly(): void
+    public function test_all_streamlined_module_screens_render_cleanly(): void
     {
         $user = User::factory()->create([
             'role' => UserRole::NETWORK_ADMIN,
             'status' => 'active',
         ]);
 
-        $routes = [
-            '/dashboard',
-            '/subnets',
-            '/vrfs',
-            '/vlans',
-            '/ip-addresses',
-            '/devices',
-            '/requests',
-            '/discovery',
-            '/alerts',
-            '/reports',
-            '/admin',
+        $modules = [
+            route('dashboard'),
+            route('subnets.index'),
+            route('vlans.index'),
+            route('ip-addresses.index'),
         ];
 
-        foreach ($routes as $route) {
-            $response = $this->actingAs($user)->get($route);
-            $response->assertStatus(200, "Failed asserting that route [{$route}] renders successfully.");
+        foreach ($modules as $url) {
+            $response = $this->actingAs($user)->get($url);
+            $response->assertStatus(200);
         }
     }
 }
-

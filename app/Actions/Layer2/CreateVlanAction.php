@@ -14,12 +14,11 @@ use Illuminate\Validation\ValidationException;
 class CreateVlanAction
 {
     /**
-     * @param array{l2_domain_id: int, vlan_id: int, name: string, description?: ?string, security_zone?: string|VlanSecurityZone, status?: string|VlanStatus} $data
+     * @param array{vlan_id: int, name: string, description?: ?string, security_zone?: string|VlanSecurityZone, status?: string|VlanStatus, is_restricted?: bool} $data
      */
     public function execute(array $data): Vlan
     {
         $vlanId = (int) $data['vlan_id'];
-        $l2DomainId = (int) $data['l2_domain_id'];
 
         if ($vlanId < 1 || $vlanId > 4094) {
             throw ValidationException::withMessages([
@@ -27,26 +26,25 @@ class CreateVlanAction
             ]);
         }
 
-        // Critical Invariant: Unique per L2 Domain
-        if (Vlan::where('l2_domain_id', $l2DomainId)->where('vlan_id', $vlanId)->exists()) {
+        if (Vlan::where('vlan_id', $vlanId)->exists()) {
             throw ValidationException::withMessages([
-                'vlan_id' => "VLAN {$vlanId} already exists in this Layer 2 broadcast domain.",
+                'vlan_id' => "VLAN {$vlanId} already exists.",
             ]);
         }
 
-        return DB::transaction(function () use ($data, $l2DomainId, $vlanId) {
+        return DB::transaction(function () use ($data, $vlanId) {
             $vlan = Vlan::create([
-                'l2_domain_id' => $l2DomainId,
                 'vlan_id' => $vlanId,
                 'name' => trim($data['name']),
                 'description' => $data['description'] ?? null,
                 'security_zone' => $data['security_zone'] ?? VlanSecurityZone::INTERNAL,
                 'status' => $data['status'] ?? VlanStatus::ACTIVE,
+                'is_restricted' => $data['is_restricted'] ?? false,
             ]);
 
             AuditEvent::record(
                 eventType: 'vlan.created',
-                reason: "Created VLAN {$vlan->vlan_id} ({$vlan->name}) in L2 Domain #{$vlan->l2_domain_id}",
+                reason: "Created VLAN {$vlan->vlan_id} ({$vlan->name})",
                 subject: $vlan,
                 after: $vlan->toArray()
             );
@@ -55,4 +53,3 @@ class CreateVlanAction
         });
     }
 }
-

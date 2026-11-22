@@ -6,14 +6,11 @@ namespace App\Services\AddressSpace;
 
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
-use App\Domain\AddressSpace\Enums\IpConnectivityStatus;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
 use App\Models\IpAddress;
 use App\Models\IpExclusion;
 use App\Models\IpPool;
 use App\Models\Subnet;
-use Brick\Math\BigInteger;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class CandidateWindowGenerator
 {
@@ -28,9 +25,9 @@ class CandidateWindowGenerator
         $prefix = $subnet->toIpPrefix();
         $totalUsable = $prefix->usableAddresses();
 
-        // Cap pagination total for massive IPv6 subnets to prevent integer overflow in UI paginator
+        // Cap pagination total for massive IPv6 subnets
         $cappedTotal = $totalUsable->isGreaterThan(100000) ? 100000 : (int) (string) $totalUsable;
-        $lastPage = (int) ceil($cappedTotal / $perPage);
+        $lastPage = max(1, (int) ceil($cappedTotal / $perPage));
         $page = max(1, min($page, $lastPage));
 
         $offset = ($page - 1) * $perPage;
@@ -44,10 +41,9 @@ class CandidateWindowGenerator
         $startHex = $windowStart->toHex();
         $endHex = $windowEnd->toHex();
 
-        // Fetch materialized DB records in this window for this VRF
-        $materialized = IpAddress::with(['currentAssignment.interface.device', 'currentAssignment.assignedBy'])
-            ->where('vrf_id', $subnet->vrf_id)
-            ->where('ip_version', $subnet->ip_version)
+        // Fetch materialized DB records in this window for this Subnet
+        $materialized = IpAddress::with('currentAssignment')
+            ->where('subnet_id', $subnet->id)
             ->whereBetween('address_hex', [$startHex, $endHex])
             ->get()
             ->keyBy('address_hex');
@@ -61,67 +57,68 @@ class CandidateWindowGenerator
 
         // Fetch pools overlapping this window
         $pools = IpPool::where('subnet_id', $subnet->id)
-            ->where('status', 'active')
             ->where('start_hex', '<=', $endHex)
             ->where('end_hex', '>=', $startHex)
             ->get();
 
         $items = [];
-        $currentIp = $windowStart;
+        $current = $windowStart;
 
         for ($i = 0; $i < $windowCount; $i++) {
-            $hex = $currentIp->toHex();
-            $text = $currentIp->toNormalizedString();
+            $hex = $current->toHex();
+            $ipText = $current->toNormalizedString();
 
-            if ($materialized->has($hex)) {
-                /** @var IpAddress $dbIp */
-                $dbIp = $materialized->get($hex);
-                $items[] = [
-                    'id' => $dbIp->id,
-                    'address' => $text,
-                    'hex' => $hex,
-                    'is_materialized' => true,
-                    'allocation_status' => $dbIp->allocation_status,
-                    'connectivity_status' => $dbIp->connectivity_status,
-                    'classification' => $dbIp->classification,
-                    'hostname' => $dbIp->hostname,
-                    'description' => $dbIp->description,
-                    'current_assignment' => $dbIp->currentAssignment,
-                    'quarantined_until' => $dbIp->quarantined_until,
-                    'quarantine_reason' => $dbIp->quarantine_reason,
-                    'exclusion' => null,
-                    'pool' => null,
-                ];
+            if (isset($materialized[$hex])) {
+                $record = $materialized[$hex];
+                $status = $record->allocation_status;
+                $classification = $record->classification;
+                $hostname = $record->hostname;
+                $macAddress = $record->mac_address;
+                $assignedTo = $record->assigned_to;
+                $dbId = $record->id;
+                $quarantinedUntil = $record->quarantined_until;
             } else {
+                $status = IpAllocationStatus::UNASSIGNED;
+                $classification = IpClassification::STATIC_HOST;
+                $hostname = null;
+                $macAddress = null;
+                $assignedTo = null;
+                $dbId = null;
+                $quarantinedUntil = null;
+
                 // Check if excluded
-                $matchingExclusion = $exclusions->first(fn ($ex) => $hex >= $ex->start_hex && $hex <= $ex->end_hex);
-                $matchingPool = $pools->first(fn ($p) => $hex >= $p->start_hex && $hex <= $p->end_hex);
-
-                $allocStatus = $matchingExclusion
-                    ? IpAllocationStatus::BLOCKED
-                    : ($matchingPool && !$matchingPool->type->allowsStaticAllocation() ? IpAllocationStatus::BLOCKED : IpAllocationStatus::UNASSIGNED);
-
-                $items[] = [
-                    'id' => null,
-                    'address' => $text,
-                    'hex' => $hex,
-                    'is_materialized' => false,
-                    'allocation_status' => $allocStatus,
-                    'connectivity_status' => IpConnectivityStatus::UNOBSERVED,
-                    'classification' => $matchingExclusion ? IpClassification::GATEWAY : IpClassification::STATIC_HOST,
-                    'hostname' => null,
-                    'description' => $matchingExclusion?->reason ?? ($matchingPool ? $matchingPool->name : null),
-                    'current_assignment' => null,
-                    'quarantined_until' => null,
-                    'quarantine_reason' => null,
-                    'exclusion' => $matchingExclusion,
-                    'pool' => $matchingPool,
-                ];
+                foreach ($exclusions as $ex) {
+                    if (strcmp($hex, $ex->start_hex) >= 0 && strcmp($hex, $ex->end_hex) <= 0) {
+                        $status = IpAllocationStatus::BLOCKED;
+                        $classification = IpClassification::NETWORK;
+                        break;
+                    }
+                }
             }
 
-            if ($i < $windowCount - 1) {
-                $currentIp = $currentIp->next();
+            // Find matching pool
+            $poolName = null;
+            foreach ($pools as $pool) {
+                if (strcmp($hex, $pool->start_hex) >= 0 && strcmp($hex, $pool->end_hex) <= 0) {
+                    $poolName = $pool->name;
+                    break;
+                }
             }
+
+            $items[] = [
+                'id' => $dbId,
+                'ip_text' => $ipText,
+                'hex' => $hex,
+                'status' => $status,
+                'classification' => $classification,
+                'hostname' => $hostname,
+                'mac_address' => $macAddress,
+                'assigned_to' => $assignedTo,
+                'pool_name' => $poolName,
+                'quarantined_until' => $quarantinedUntil,
+            ];
+
+            $current = $current->next();
         }
 
         return [
@@ -133,4 +130,3 @@ class CandidateWindowGenerator
         ];
     }
 }
-

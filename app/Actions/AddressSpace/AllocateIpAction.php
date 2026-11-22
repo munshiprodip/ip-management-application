@@ -6,10 +6,8 @@ namespace App\Actions\AddressSpace;
 
 use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
-use App\Domain\AddressSpace\Enums\IpConnectivityStatus;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
 use App\Models\AuditEvent;
-use App\Models\DeviceInterface;
 use App\Models\IpAddress;
 use App\Models\IpAssignment;
 use App\Models\Subnet;
@@ -31,9 +29,10 @@ class AllocateIpAction
      * @param array{
      *     subnet_id: int,
      *     ip_address?: ?string,
-     *     interface_id?: ?int,
      *     classification?: string|IpClassification,
      *     hostname?: ?string,
+     *     mac_address?: ?string,
+     *     assigned_to?: ?string,
      *     description?: ?string,
      *     idempotency_key?: ?string
      * } $data
@@ -77,14 +76,14 @@ class AllocateIpAction
             }
         }
 
-        // 3. Invariant T-009: Reject if in excluded range or non-static pool without override
+        // 3. Reject if in excluded range or dynamic pool
         if ($this->poolValidation->isExcludedOrDynamic($subnet, $ipVO)) {
             throw ValidationException::withMessages([
-                'ip_address' => "Address {$ipVO->toNormalizedString()} falls within an excluded static range or dynamic DHCP pool.",
+                'ip_address' => "Address {$ipVO->toNormalizedString()} falls within an excluded range or dynamic pool.",
             ]);
         }
 
-        // 4. Invariant T-010: Bounded retry transaction with row locking
+        // 4. Bounded retry transaction with row locking
         $maxRetries = 3;
         $attempt = 0;
 
@@ -92,35 +91,37 @@ class AllocateIpAction
             $attempt++;
             try {
                 return DB::transaction(function () use ($subnet, $ipVO, $data, $actor, $idempotencyKey) {
-                    // Lock existing address record or create new claim
                     $addressHex = $ipVO->toHex();
 
-                    // Lock existing row if present (T-010 concurrency lock)
-                    $ipRecord = IpAddress::where('vrf_id', $subnet->vrf_id)
-                        ->where('ip_version', $subnet->ip_version)
+                    $ipRecord = IpAddress::where('subnet_id', $subnet->id)
                         ->where('address_hex', $addressHex)
                         ->lockForUpdate()
                         ->first();
 
                     if (! $ipRecord) {
                         $ipRecord = IpAddress::create([
-                            'vrf_id' => $subnet->vrf_id,
                             'subnet_id' => $subnet->id,
                             'ip_version' => $subnet->ip_version,
                             'address_hex' => $addressHex,
                             'address_text' => $ipVO->toNormalizedString(),
                             'allocation_status' => IpAllocationStatus::UNASSIGNED,
-                            'connectivity_status' => IpConnectivityStatus::UNOBSERVED,
                             'classification' => $data['classification'] ?? IpClassification::STATIC_HOST,
                             'hostname' => !empty($data['hostname']) ? trim($data['hostname']) : null,
+                            'mac_address' => !empty($data['mac_address']) ? strtoupper(trim($data['mac_address'])) : null,
+                            'assigned_to' => !empty($data['assigned_to']) ? trim($data['assigned_to']) : null,
                             'description' => $data['description'] ?? null,
                         ]);
                     }
 
-                    // Invariant T-008: Reject if already allocated, even if currently observed offline
                     if ($ipRecord->allocation_status === IpAllocationStatus::ASSIGNED) {
                         throw ValidationException::withMessages([
-                            'ip_address' => "Address {$ipRecord->address_text} is already authoritatively assigned (Status: Assigned).",
+                            'ip_address' => "Address {$ipRecord->address_text} is already assigned.",
+                        ]);
+                    }
+
+                    if ($ipRecord->allocation_status === IpAllocationStatus::RESERVED) {
+                        throw ValidationException::withMessages([
+                            'ip_address' => "Address {$ipRecord->address_text} is currently reserved.",
                         ]);
                     }
 
@@ -130,43 +131,35 @@ class AllocateIpAction
                         ]);
                     }
 
-                    if ($ipRecord->allocation_status === IpAllocationStatus::BLOCKED) {
-                        throw ValidationException::withMessages([
-                            'ip_address' => "Address {$ipRecord->address_text} is administratively blocked.",
-                        ]);
-                    }
-
-                    // Optional Interface linkage
-                    $interfaceId = !empty($data['interface_id']) ? (int) $data['interface_id'] : null;
-                    if ($interfaceId !== null) {
-                        DeviceInterface::findOrFail($interfaceId);
-                    }
-
-                    // Append immutable assignment history
+                    // Create assignment record
                     $assignment = IpAssignment::create([
                         'ip_address_id' => $ipRecord->id,
-                        'interface_id' => $interfaceId,
+                        'assigned_to' => !empty($data['assigned_to']) ? trim($data['assigned_to']) : null,
+                        'hostname' => !empty($data['hostname']) ? trim($data['hostname']) : null,
+                        'mac_address' => !empty($data['mac_address']) ? strtoupper(trim($data['mac_address'])) : null,
                         'assigned_at' => now(),
                         'assignment_method' => !empty($data['ip_address']) ? 'manual_static' : 'auto_first_free',
                         'assigned_by_user_id' => $actor?->id ?? auth()->id(),
                         'idempotency_key' => $idempotencyKey,
+                        'notes' => $data['description'] ?? null,
                     ]);
 
-                    // Authoritative update on IP record
+                    // Update IP record
                     $ipRecord->update([
-                        'current_assignment_id' => $assignment->id,
                         'allocation_status' => IpAllocationStatus::ASSIGNED,
                         'classification' => $data['classification'] ?? $ipRecord->classification,
                         'hostname' => !empty($data['hostname']) ? trim($data['hostname']) : $ipRecord->hostname,
+                        'mac_address' => !empty($data['mac_address']) ? strtoupper(trim($data['mac_address'])) : $ipRecord->mac_address,
+                        'assigned_to' => !empty($data['assigned_to']) ? trim($data['assigned_to']) : $ipRecord->assigned_to,
                         'description' => $data['description'] ?? $ipRecord->description,
+                        'assigned_at' => now(),
                         'quarantined_until' => null,
                         'quarantine_reason' => null,
                     ]);
 
-                    // Invariant T-011: Structured audit trail
                     AuditEvent::record(
                         eventType: 'ip.assigned',
-                        reason: "Assigned {$ipRecord->address_text} in VRF #{$subnet->vrf_id} to interface #{$interfaceId}",
+                        reason: "Assigned {$ipRecord->address_text} to " . ($ipRecord->hostname ?? $ipRecord->assigned_to ?? 'Host'),
                         subject: $ipRecord,
                         after: $ipRecord->toArray(),
                         actor: $actor
@@ -179,10 +172,10 @@ class AllocateIpAction
             } catch (Exception $e) {
                 if ($attempt >= $maxRetries) {
                     throw ValidationException::withMessages([
-                        'ip_address' => "Failed to allocate IP address due to concurrency conflict: {$e->getMessage()}",
+                        'ip_address' => "Failed to allocate IP address: {$e->getMessage()}",
                     ]);
                 }
-                usleep(rand(50000, 150000)); // 50-150ms backoff jitter
+                usleep(rand(50000, 150000));
             }
         }
 
@@ -191,4 +184,3 @@ class AllocateIpAction
         ]);
     }
 }
-

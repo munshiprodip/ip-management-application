@@ -9,7 +9,7 @@ use App\Domain\Layer2\Enums\VlanStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Vlan extends Model
 {
@@ -18,12 +18,12 @@ class Vlan extends Model
     protected $table = 'vlans';
 
     protected $fillable = [
-        'l2_domain_id',
         'vlan_id',
         'name',
         'description',
         'security_zone',
         'status',
+        'is_restricted',
     ];
 
     protected function casts(): array
@@ -32,16 +32,21 @@ class Vlan extends Model
             'vlan_id' => 'integer',
             'security_zone' => VlanSecurityZone::class,
             'status' => VlanStatus::class,
+            'is_restricted' => 'boolean',
         ];
     }
 
-    public function l2Domain(): BelongsTo
+    public function subnets(): HasMany
     {
-        return $this->belongsTo(L2Domain::class);
+        return $this->hasMany(Subnet::class);
     }
 
     public function isMedicalRestricted(): bool
     {
+        if ($this->is_restricted) {
+            return true;
+        }
+
         return $this->security_zone instanceof VlanSecurityZone && $this->security_zone->isMedicalRestricted();
     }
 

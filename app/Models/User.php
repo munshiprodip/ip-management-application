@@ -15,11 +15,6 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -31,21 +26,11 @@ class User extends Authenticatable
         'timezone',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -74,21 +59,6 @@ class User extends Authenticatable
         ], true);
     }
 
-    public function isDepartmentOperator(): bool
-    {
-        return $this->role === UserRole::DEPARTMENT_OPERATOR;
-    }
-
-    public function isAuditor(): bool
-    {
-        return in_array($this->role, [UserRole::SUPER_ADMIN, UserRole::AUDITOR], true);
-    }
-
-    public function isApprover(): bool
-    {
-        return in_array($this->role, [UserRole::SUPER_ADMIN, UserRole::APPROVER], true);
-    }
-
     public function isActive(): bool
     {
         return $this->status === 'active';
@@ -97,36 +67,6 @@ class User extends Authenticatable
     public function canManageNetwork(): bool
     {
         return $this->isActive() && $this->isNetworkAdmin();
-    }
-
-    public function scopes(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(UserScope::class);
-    }
-
-    public function hasScope(string $type, int $id): bool
-    {
-        if ($this->isNetworkAdmin()) {
-            return true;
-        }
-
-        return $this->scopes()
-            ->where('scope_type', $type)
-            ->where('scope_id', $id)
-            ->exists();
-    }
-
-    public function allowedDepartmentIds(): array
-    {
-        if ($this->isNetworkAdmin()) {
-            return [];
-        }
-
-        return $this->scopes()
-            ->where('scope_type', 'department')
-            ->pluck('scope_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
     }
 
     public function hasRole(UserRole|string|array $roles): bool

@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subnet extends Model
@@ -23,10 +22,7 @@ class Subnet extends Model
     protected $table = 'subnets';
 
     protected $fillable = [
-        'vrf_id',
         'parent_id',
-        'site_id',
-        'department_id',
         'vlan_id',
         'name',
         'description',
@@ -39,7 +35,6 @@ class Subnet extends Model
         'subnet_type',
         'status',
         'allocation_enabled',
-        'scan_enabled',
     ];
 
     protected function casts(): array
@@ -50,13 +45,7 @@ class Subnet extends Model
             'subnet_type' => SubnetType::class,
             'status' => SubnetStatus::class,
             'allocation_enabled' => 'boolean',
-            'scan_enabled' => 'boolean',
         ];
-    }
-
-    public function vrf(): BelongsTo
-    {
-        return $this->belongsTo(Vrf::class);
     }
 
     public function parent(): BelongsTo
@@ -69,26 +58,9 @@ class Subnet extends Model
         return $this->hasMany(Subnet::class, 'parent_id');
     }
 
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(Site::class);
-    }
-
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
     public function vlan(): BelongsTo
     {
         return $this->belongsTo(Vlan::class);
-    }
-
-    public function vlans(): BelongsToMany
-    {
-        return $this->belongsToMany(Vlan::class, 'subnet_vlans')
-            ->withPivot(['association_type', 'gateway_ip'])
-            ->withTimestamps();
     }
 
     public function pools(): HasMany
@@ -107,9 +79,9 @@ class Subnet extends Model
     }
 
     /**
-     * T-024: Calculate allocated address count without double counting children.
-     * Leaf subnets count their own materialized active IPs.
-     * Parent container utilization counts child prefix space without double-counting nested descendants.
+     * Calculate allocated address count.
+     * Leaf subnets count active materialized IPs.
+     * Containers sum child capacities.
      */
     public function allocatedCount(bool $recursive = false): int
     {
@@ -182,7 +154,7 @@ class Subnet extends Model
     {
         $total = $this->totalAddresses();
         if ($this->ip_version === 6) {
-            return $total->isGreaterThan('18446744073709551616') // > 2^64
+            return $total->isGreaterThan('18446744073709551616')
                 ? '2^' . (128 - $this->prefix_length) . ' (' . $total->toBase(10)[0] . 'e+' . (strlen($total->toBase(10)) - 1) . ')'
                 : number_format((float) (string) $total);
         }
@@ -230,14 +202,8 @@ class Subnet extends Model
         return $query->whereNull('parent_id');
     }
 
-    public function scopeInVrf(Builder $query, int $vrfId): Builder
-    {
-        return $query->where('vrf_id', $vrfId);
-    }
-
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', SubnetStatus::ACTIVE);
     }
 }
-

@@ -35,7 +35,7 @@ class SafetyFlagsTest extends TestCase
         );
     }
 
-    public function test_safe_posture_is_displayed_on_dashboard_and_discovery_pages(): void
+    public function test_safe_posture_is_displayed_in_app_shell(): void
     {
         $user = User::factory()->create([
             'role' => UserRole::NETWORK_ADMIN,
@@ -43,12 +43,8 @@ class SafetyFlagsTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->get('/dashboard');
-        $response->assertSee('DISABLED (SAFE)');
-        $response->assertSee('LOCKED (READ-ONLY)');
-
-        $response = $this->actingAs($user)->get('/discovery');
-        $response->assertSee('Safe Evidence Principle: Observations Never Overwrite Allocations');
-        $response->assertSee('DISABLED (SAFE)');
+        $response->assertStatus(200);
+        $response->assertSee('SAFE / OFF');
+        $response->assertSee('LOCKED');
     }
 }
-

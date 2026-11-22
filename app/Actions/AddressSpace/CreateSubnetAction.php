@@ -19,27 +19,20 @@ class CreateSubnetAction
     ) {}
 
     /**
-     * @param array{vrf_id: int, cidr: string, name: string, parent_id?: ?int, site_id?: ?int, department_id?: ?int, vlan_id?: ?int, subnet_type?: string|SubnetType, status?: string|SubnetStatus, description?: ?string, allocation_enabled?: bool, scan_enabled?: bool} $data
+     * @param array{cidr: string, name: string, parent_id?: ?int, vlan_id?: ?int, subnet_type?: string|SubnetType, status?: string|SubnetStatus, description?: ?string, allocation_enabled?: bool} $data
      */
     public function execute(array $data): Subnet
     {
-        // 1. Canonicalize CIDR (T-001: Zero host bits)
         $prefix = IpPrefix::parse($data['cidr']);
         $canonicalCidr = $prefix->cidr();
-
-        $vrfId = (int) $data['vrf_id'];
         $parentId = !empty($data['parent_id']) ? (int) $data['parent_id'] : null;
 
-        // 2. Validate hierarchy, parent containment, and sibling non-overlap (T-002, T-003, T-004)
-        $this->hierarchyService->validateHierarchy($prefix, $vrfId, $parentId);
+        $this->hierarchyService->validateHierarchy($prefix, $parentId);
 
-        return DB::transaction(function () use ($data, $prefix, $canonicalCidr, $vrfId, $parentId) {
+        return DB::transaction(function () use ($data, $prefix, $canonicalCidr, $parentId) {
             $subnet = Subnet::create([
-                'vrf_id' => $vrfId,
                 'parent_id' => $parentId,
-                'site_id' => $data['site_id'] ?? null,
-                'department_id' => $data['department_id'] ?? null,
-                'vlan_id' => $data['vlan_id'] ?? null,
+                'vlan_id' => !empty($data['vlan_id']) ? (int) $data['vlan_id'] : null,
                 'name' => trim($data['name']),
                 'description' => $data['description'] ?? null,
                 'cidr' => $canonicalCidr,
@@ -51,19 +44,11 @@ class CreateSubnetAction
                 'subnet_type' => $data['subnet_type'] ?? SubnetType::ASSIGNABLE,
                 'status' => $data['status'] ?? SubnetStatus::ACTIVE,
                 'allocation_enabled' => $data['allocation_enabled'] ?? true,
-                'scan_enabled' => $data['scan_enabled'] ?? false, // Safe default: discovery disabled
             ]);
-
-            // Link VLAN if provided
-            if (!empty($data['vlan_id'])) {
-                $subnet->vlans()->syncWithoutDetaching([
-                    $data['vlan_id'] => ['association_type' => 'primary'],
-                ]);
-            }
 
             AuditEvent::record(
                 eventType: 'subnet.created',
-                reason: "Created subnet {$subnet->cidr} ({$subnet->name}) in VRF #{$subnet->vrf_id}",
+                reason: "Created subnet {$subnet->cidr} ({$subnet->name})",
                 subject: $subnet,
                 after: $subnet->toArray()
             );
@@ -72,4 +57,3 @@ class CreateSubnetAction
         });
     }
 }
-

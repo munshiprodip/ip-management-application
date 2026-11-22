@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\AddressSpace;
 
-use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
 use App\Models\IpAddress;
-use App\Models\IpExclusion;
 use App\Models\IpPool;
 use App\Models\Subnet;
 
@@ -33,17 +31,14 @@ class IpAllocationService
         }
 
         $current = $start;
-        $stepLimit = 256; // Check up to 256 sequential candidates per attempt
+        $stepLimit = 256;
         $checked = 0;
 
         while ($current->compareTo($end) <= 0 && $checked < $stepLimit) {
             $hex = $current->toHex();
 
-            // 1. Check if excluded or in non-static pool (T-009)
             if (! $this->poolValidation->isExcludedOrDynamic($subnet, $current)) {
-                // 2. Check database for existing active allocation
-                $existing = IpAddress::where('vrf_id', $subnet->vrf_id)
-                    ->where('ip_version', $subnet->ip_version)
+                $existing = IpAddress::where('subnet_id', $subnet->id)
                     ->where('address_hex', $hex)
                     ->first();
 
@@ -59,4 +54,3 @@ class IpAllocationService
         return null;
     }
 }
-

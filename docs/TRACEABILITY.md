@@ -1,30 +1,34 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Stage 8 Complete (API, Integrations & Production Hardening Delivered)  
+> **Status:** Version 2.0.0 Streamlined Core Architecture Delivered  
 > **Updated:** 2026-11-22  
 
-This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENTERPRISE_DEVELOPMENT_PLAN.md` to database tables, domain services, Livewire UI components, and automated test coverage.
+This matrix maps core functional requirements and active modules of the streamlined KYAMCH Smart IPAM application to database tables, domain services, Livewire UI components, and automated test coverage.
 
 ---
 
-## Master Traceability Matrix
+## Active Core Traceability Matrix
 
-| Module ID | Module Name | Priority | Core Entities / Tables | UI Components / Routes | Domain Services / Actions | Automated Tests | Stage Delivered |
-|---|---|---|---|---|---|---|---|
-| **M00** | **Baseline & Enterprise Shell** | P0 | `users`, `audit_events`, `sessions` | `/login`, `/dashboard`, Layouts | `AuditEvent::record()`, Auth | `AuthenticationTest`, `EnterpriseShellTest`, `SafetyFlagsTest`, `AuditLogTest`, `UserRoleTest` | **Stage 0** |
-| **M01** | **Organization & Locations** | P0 | `organizations`, `sites`, `departments`, `locations`, `user_scopes` | `/admin`, `Admin\Index` | `ManageOrganizationAction` | `OrganizationManagementTest` | **Stage 1** |
-| **M02** | **VRF Routing Contexts** | P0 | `vrfs` | `/vrfs`, `Vrfs\Index` | `CreateVrfAction`, `UpdateVrfAction`, `DeleteVrfAction` | `VrfManagementTest` | **Stage 1** |
-| **M03** | **L2 Domains & VLANs** | P0 | `l2_domains`, `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction`, `CreateL2DomainAction` | `VlanManagementTest` (T-016, T-017) | **Stage 1** |
-| **M04** | **Subnets & CIDR Hierarchy** | P0 | `subnets`, `subnet_vlans` | `/subnets`, `Subnets\Index` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `IpCalculatorService` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` (T-001–T-005, T-014, T-015) | **Stage 2** |
-| **M05** | **Address Pools & Exclusions** | P0 | `ip_pools`, `ip_exclusions` | `/ip-addresses`, `IPAddresses\Index` | `PoolValidationService` | `IpAllocationTest` (T-009) | **Stage 4** |
-| **M06** | **Device & Interface Inventory** | P0 | `devices`, `device_interfaces`, `device_types`, `manufacturers`, `device_models`, `interface_links` | `/devices`, `Devices\Index` | `CreateDeviceAction`, `UpdateDeviceAction`, `DeleteDeviceAction`, `CreateInterfaceAction`, `MacAddress` | `MacAddressTest`, `DeviceManagementTest`, `DeviceInterfaceTest`, `LivewireDevicesTest` | **Stage 3** |
-| **M07** | **IP Address Explorer & Records** | P0 | `ip_addresses` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator` | `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **Stage 4** |
-| **M08** | **Smart Allocation & Quarantine** | P0 | `ip_assignments`, `ip_addresses`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `AllocateIpAction`, `ReleaseIpAction`, `TransferIpAction`, `ReserveIpAction` | `IpAllocationTest` (T-006–T-013, T-024), `MySqlConcurrencyTest` | **Stage 4** |
-| **M09** | **Approval & Change Workflow** | P1 | `ip_requests`, `request_approvals`, `change_records` | `/requests`, `Requests\Index` | `SubmitRequestAction`, `ApproveRequestAction`, `RejectRequestAction`, `ProvisionRequestAction`, `ApprovalWorkflowService` | `RequestWorkflowTest` (T-021, T-022), `LivewireRequestsTest` | **Stage 5** |
-| **M10** | **Safe Discovery & Observations** | P1 | `discovery_agents`, `discovery_jobs`, `ip_observations` | `/discovery`, `Discovery\Index` | `DiscoveryExecutionService`, `DiscoveryCollectorInterface`, `FixtureDiscoveryAdapter` | `DiscoverySafetyTest` (T-018, T-019, T-020, T-028) | **Stage 6** |
-| **M11** | **Reconciliation & Conflicts** | P1 | `reconciliation_findings` | `/discovery`, `Discovery\Index` | `ReconciliationEngineService` | `ReconciliationEngineTest`, `LivewireDiscoveryTest` | **Stage 6** |
-| **M12** | **Alerting & Notifications** | P1 | `alerts`, `notification_deliveries` | `/alerts`, `Alerts\Index` | `AlertDispatcherService` | `AlertDeduplicationTest`, `LivewireAlertsAndReportsTest` | **Stage 7** |
-| **M13** | **Dashboard & Reports** | P1 | `export_jobs`, `audit_events` | `/dashboard`, `/reports`, `Dashboard\Index`, `Reports\Index` | `ReportExportService` | `ReportExportTest` (T-027, UAT-09), `LivewireAlertsAndReportsTest` | **Stage 7** |
-| **M14** | **API & Integrations** | P1/P2 | `api_tokens`, `integrations`, `integration_runs` | `/api/v1/*`, `Admin\Index` (Integrations & Tokens tabs) | `AuthenticateApiToken`, `RequireApiScope`, `SecurityHeaders`, `IntegrationSyncService`, `DhcpReadonlySyncAdapter`, `DnsReadonlySyncAdapter`, `ApiV1Controllers` | `ApiV1AuthenticationAndScopesTest`, `ApiV1EndpointsTest`, `ExternalSyncIntegrationTest` | **Stage 8** |
-| **M15** | **Security & System Admin** | P0/P1 | `settings`, `audit_events`, `users`, `export_jobs` | `/admin`, `Admin\Index` | `AuditLogger`, `FeatureFlagService`, `ReportExportService` (CSV sanitization), `IpamHealthCheckCommand`, `IpamPurgeExpiredCommand` | `SecurityHardeningTest`, `AuditLogTest`, `UserRoleTest`, `SafetyFlagsTest` | **Stage 0 / Stage 8** |
+| Module ID | Module Name | Core Entities / Tables | UI Components / Routes | Domain Services / Actions | Automated Tests | Architecture Status |
+|---|---|---|---|---|---|---|
+| **M00** | **Baseline & Enterprise Shell** | `users`, `audit_events`, `sessions` | `/login`, `/dashboard`, `AppLayout` | `AuditEvent::record()`, Auth Guards | `AuthenticationTest`, `EnterpriseShellTest`, `SafetyFlagsTest`, `AuditLogTest`, `UserRoleTest` | **ACTIVE** |
+| **M01** | **802.1Q VLAN Management** | `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction` | `VlanManagementTest` | **ACTIVE** |
+| **M02** | **Subnets & CIDR Hierarchy** | `subnets` | `/subnets`, `Subnets\Index` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `CreateSubnetAction`, `UpdateSubnetAction`, `DeleteSubnetAction` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` | **ACTIVE** |
+| **M03** | **Address Pools & Exclusions** | `ip_pools`, `ip_exclusions` | `/ip-addresses`, `IPAddresses\Index` | `AllocateIpAction` (Pool & exclusion validation) | `IpAllocationTest` | **ACTIVE** |
+| **M04** | **IP Address Explorer & Allocations** | `ip_addresses`, `ip_assignments`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator`, `AllocateIpAction`, `ReleaseIpAction`, `ReserveIpAction` | `IpAllocationTest`, `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **ACTIVE** |
+
+---
+
+## Decommissioned Modules
+
+| Module ID | Module Name | Decommissioned Entities | Reason for Removal |
+|---|---|---|---|
+| **M05** | **Organizations & Multi-Site Scopes** | `organizations`, `sites`, `departments`, `locations`, `user_scopes` | Replaced by direct global enterprise network space |
+| **M06** | **VRF Routing Contexts** | `vrfs` | Unneeded complexity; single unified routing table per address family |
+| **M07** | **Physical Hardware & Device Inventory** | `devices`, `device_interfaces`, `device_types`, `manufacturers`, `device_models`, `interface_links` | Replaced with direct IP host, MAC, and assignment owner tracking |
+| **M08** | **Ticket-based Request & Approval Workflows** | `ip_requests`, `request_approvals`, `change_records` | Eliminated operational overhead in favor of direct operator allocation |
+| **M09** | **Active Network Discovery & Reconciliation** | `discovery_agents`, `discovery_jobs`, `ip_observations`, `reconciliation_findings` | Active probing removed to avoid clinical and network disruption risks |
+| **M10** | **Alert Deduplication & Notification Engine** | `alerts`, `notification_deliveries` | Removed background queue workers and external notification dependencies |
+| **M11** | **Asynchronous Export Jobs & Reports** | `export_jobs` | Removed background file processing and disk export storage |
+| **M12** | **REST API & External Sync Integrations** | `api_tokens`, `integrations`, `integration_runs` | Dedicated external sync removed; all IPAM managed directly via Livewire UI |
