@@ -16,7 +16,7 @@ This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENT
 | **M01** | **Organization & Locations** | P0 | `organizations`, `sites`, `departments`, `locations`, `user_scopes` | `/admin`, `Admin\Index` | `ManageOrganizationAction` | `OrganizationManagementTest` | **Stage 1** |
 | **M02** | **VRF Routing Contexts** | P0 | `vrfs` | `/vrfs`, `Vrfs\Index` | `CreateVrfAction`, `UpdateVrfAction`, `DeleteVrfAction` | `VrfManagementTest` | **Stage 1** |
 | **M03** | **L2 Domains & VLANs** | P0 | `l2_domains`, `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction`, `CreateL2DomainAction` | `VlanManagementTest` (T-016, T-017) | **Stage 1** |
-| **M04** | **Subnets & CIDR Hierarchy** | P0 | `subnets`, `subnet_vlans` | `/subnets`, `Subnets\Index` | `IpPrefix`, `IpAddressMath`, `SubnetHierarchyService` | *Planned: Stage 2 (T-001–T-005)* | Stage 2 |
+| **M04** | **Subnets & CIDR Hierarchy** | P0 | `subnets`, `subnet_vlans` | `/subnets`, `Subnets\Index` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `IpCalculatorService` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` (T-001–T-005, T-014, T-015) | **Stage 2** |
 | **M05** | **Address Pools & Exclusions** | P0 | `ip_pools`, `ip_exclusions` | `/pools`, `Pools\Index` | `PoolValidationService` | *Planned: Stage 4* | Stage 4 |
 | **M06** | **Device & Interface Inventory** | P0 | `devices`, `device_interfaces`, `device_types` | `/devices`, `Devices\Index` | `RegisterDeviceAction`, `InterfaceLinkService` | *Planned: Stage 3* | Stage 3 |
 | **M07** | **IP Address Explorer & Records** | P0 | `ip_addresses` | `/ip-addresses`, `IPAddresses\Index` | `IpExplorerService`, `CandidateWindowGenerator` | *Planned: Stage 4* | Stage 4 |

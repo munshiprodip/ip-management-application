@@ -39,3 +39,4 @@ class L2DomainPolicy
         return $user->canManageNetwork();
     }
 }
+

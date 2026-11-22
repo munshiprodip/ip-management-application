@@ -34,3 +34,4 @@ class VlanPolicy
         return $user->canManageNetwork();
     }
 }
+

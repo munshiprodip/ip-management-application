@@ -1,0 +1,190 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Domain\AddressSpace\Enums\SubnetStatus;
+use App\Domain\AddressSpace\Enums\SubnetType;
+use App\Domain\AddressSpace\ValueObjects\IpPrefix;
+use Brick\Math\BigInteger;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Subnet extends Model
+{
+    use HasFactory;
+
+    protected $table = 'subnets';
+
+    protected $fillable = [
+        'vrf_id',
+        'parent_id',
+        'site_id',
+        'department_id',
+        'vlan_id',
+        'name',
+        'description',
+        'cidr',
+        'ip_version',
+        'network_hex',
+        'start_hex',
+        'end_hex',
+        'prefix_length',
+        'subnet_type',
+        'status',
+        'allocation_enabled',
+        'scan_enabled',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'ip_version' => 'integer',
+            'prefix_length' => 'integer',
+            'subnet_type' => SubnetType::class,
+            'status' => SubnetStatus::class,
+            'allocation_enabled' => 'boolean',
+            'scan_enabled' => 'boolean',
+        ];
+    }
+
+    public function vrf(): BelongsTo
+    {
+        return $this->belongsTo(Vrf::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Subnet::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Subnet::class, 'parent_id');
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function vlan(): BelongsTo
+    {
+        return $this->belongsTo(Vlan::class);
+    }
+
+    public function vlans(): BelongsToMany
+    {
+        return $this->belongsToMany(Vlan::class, 'subnet_vlans')
+            ->withPivot(['association_type', 'gateway_ip'])
+            ->withTimestamps();
+    }
+
+    public function toIpPrefix(): IpPrefix
+    {
+        return IpPrefix::parse($this->cidr);
+    }
+
+    public function isRoot(): bool
+    {
+        return $this->parent_id === null;
+    }
+
+    public function isLeaf(): bool
+    {
+        return $this->children()->count() === 0;
+    }
+
+    public function isAggregate(): bool
+    {
+        return $this->subnet_type === SubnetType::AGGREGATE;
+    }
+
+    public function isAssignable(): bool
+    {
+        return $this->subnet_type->canAllocate() && $this->allocation_enabled && $this->status === SubnetStatus::ACTIVE;
+    }
+
+    public function totalAddresses(): BigInteger
+    {
+        return $this->toIpPrefix()->totalAddresses();
+    }
+
+    public function usableAddresses(): BigInteger
+    {
+        return $this->toIpPrefix()->usableAddresses();
+    }
+
+    public function totalAddressesFormatted(): string
+    {
+        $total = $this->totalAddresses();
+        if ($this->ip_version === 6) {
+            return $total->isGreaterThan('18446744073709551616') // > 2^64
+                ? '2^' . (128 - $this->prefix_length) . ' (' . $total->toBase(10)[0] . 'e+' . (strlen($total->toBase(10)) - 1) . ')'
+                : number_format((float) (string) $total);
+        }
+
+        return number_format((int) (string) $total);
+    }
+
+    public function usableAddressesFormatted(): string
+    {
+        $usable = $this->usableAddresses();
+        if ($this->ip_version === 6) {
+            return $usable->isGreaterThan('18446744073709551616')
+                ? '2^' . (128 - $this->prefix_length) . ' - 1'
+                : number_format((float) (string) $usable);
+        }
+
+        return number_format((int) (string) $usable);
+    }
+
+    /**
+     * Get ancestry chain from root down to this subnet.
+     *
+     * @return Collection<int, Subnet>
+     */
+    public function ancestors(): Collection
+    {
+        $ancestors = new Collection();
+        $current = $this->parent;
+
+        while ($current !== null) {
+            $ancestors->prepend($current);
+            $current = $current->parent;
+        }
+
+        return $ancestors;
+    }
+
+    public function depth(): int
+    {
+        return $this->ancestors()->count();
+    }
+
+    public function scopeRoots(Builder $query): Builder
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeInVrf(Builder $query, int $vrfId): Builder
+    {
+        return $query->where('vrf_id', $vrfId);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', SubnetStatus::ACTIVE);
+    }
+}

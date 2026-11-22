@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 1.1.0  
+> **Current Version:** 1.2.0  
 > **Last Updated:** 2026-11-22  
-> **Current Stage:** Stage 1 — Organization, Permissions, VRFs and VLAN Foundations (COMPLETED)  
-> **Next Stage:** Stage 2 — IP Math and Subnet Hierarchy  
+> **Current Stage:** Stage 2 — IP Math, CIDR Operations and Subnet Hierarchy (COMPLETED)  
+> **Next Stage:** Stage 3 — Device and Interface Inventory  
 
 ---
 
@@ -14,14 +14,42 @@
 |---|---|---|---|---|
 | **0** | **Baseline & Architecture** | **COMPLETED** | **20/20 Tests Passed** | Laravel 13, Livewire 4, Tailwind 4, SQLite, Auth, Shell, Audit, Flags |
 | **1** | **Organization, Permissions, VRF & VLANs** | **COMPLETED** | **35/35 Tests Passed** | Organizations, Sites, Departments, Locations, Default VRF, L2 Domains, 802.1Q VLANs |
-| 2 | IP Math & Subnet Hierarchy | READY TO START | Prerequisite: Stage 1 | Value objects, 128-bit math, overlap validation |
-| 3 | Device & Interface Inventory | QUEUED | Prerequisite: Stage 1 | Multi-NIC devices, asset tags |
+| **2** | **IP Math & Subnet Hierarchy** | **COMPLETED** | **71/71 Tests Passed** | 128-bit math (Brick\Math), canonical CIDR (T-001), containment (T-002, T-003), non-overlap (T-004), acyclic tree (T-005), /31 & /32 (T-014), /127 & /128 (T-015), CIDR calculator, split preview |
+| 3 | Device & Interface Inventory | READY TO START | Prerequisite: Stage 1 | Multi-NIC devices, asset tags, hardware vendors |
 | 4 | Pools, IP Explorer & Allocation (MVP) | QUEUED | Prerequisite: Stages 2 & 3 | Atomic transactions, MySQL concurrency |
 | 5 | Requests & Approvals | QUEUED | Prerequisite: Stage 4 | Formal segregation of duties |
 | 6 | Safe Discovery & Reconciliation | QUEUED | Prerequisite: Stage 4 | Opt-in read-only evidence collection |
 | 7 | Alerts & Network Views | QUEUED | Prerequisite: Stages 5 & 6 | Deduplication, capacity dashboards |
 | 8 | API & Production Hardening | QUEUED | Prerequisite: Stage 7 | OpenAPI, token scopes, security hardening |
 | 9 | Controlled Handover | QUEUED | Prerequisite: Stage 8 | Pilot onboarding and runbooks |
+
+---
+
+## Stage 2 Execution Record
+
+### Completed Items
+- [x] Value Objects (`App\Domain\AddressSpace\ValueObjects`):
+  - `IpAddress`: IPv4/IPv6 parsing, fixed-width hex conversion (8 chars v4, 32 chars v6), 128-bit exact arithmetic (`add`, `subtract`, `compareTo`, `equals`) using `brick/math`.
+  - `IpPrefix`: CIDR normalization with host bits zeroed (**T-001**), containment (`containsIp`, `containsPrefix`), overlap detection (`overlapsPrefix`), boundary hex strings (`network_hex`, `start_hex`, `end_hex`), capacity calculation (`totalAddresses`, `usableAddresses` honoring /31 and /32 IPv4 [**T-014**], and /127 and /128 IPv6 [**T-015**]), and non-enumerating `split($newPrefixLength)`.
+- [x] Domain Enums:
+  - `SubnetType` (`aggregate`, `assignable`, `point_to_point`, `loopback`)
+  - `SubnetStatus` (`planned`, `active`, `deprecated`, `retired`)
+- [x] Database Migration:
+  - `2026_11_22_000201_create_subnets_table.php`: `subnets` table with range indexes (`start_hex`, `end_hex`, `prefix_length`), composite unique constraint `(vrf_id, ip_version, cidr)`, and `subnet_vlans` association table.
+- [x] Eloquent Model:
+  - `App\Models\Subnet`: Parent/child recursive relationships, ancestors path, capacity accessors, formatted address spans, and primary VLAN linkage.
+- [x] Domain Services & Actions:
+  - `IpCalculatorService`: Complete CIDR calculator engine (network, broadcast, usable host range, netmask/wildcard, hex bounds, split preview) with zero host enumeration.
+  - `SubnetHierarchyService`: Business invariant validator enforcing parent containment (**T-002**, **T-003**), sibling overlap rejection in same VRF (**T-004**), acyclic hierarchy (**T-005**), and `findFreeChildPrefix`.
+  - `CreateSubnetAction`: Atomically validates invariants, canonicalizes CIDR, creates DB record, syncs VLANs, and records `subnet.created` audit event.
+  - `UpdateSubnetAction`: Validates acyclic tree and hierarchy changes, updates attributes, and records `subnet.updated` audit event.
+  - `DeleteSubnetAction`: Blocks deletion if child subnets exist, deletes leaf subnets, and records `subnet.deleted` audit event.
+- [x] Policy:
+  - `SubnetPolicy`: Restricts creation/updates/deletions to Network Admin and Super Admin; blocks deletion of subnets with children.
+- [x] Livewire 4 UI Management:
+  - `App\Livewire\Subnets\Index`: Hierarchical drill-down tree with site and VRF context breadcrumbs, flat searchable view, CIDR subnet calculator modal, non-destructive split preview modal, and create/edit modal with "Suggest Next Free Block".
+- [x] Seeder (`Stage2Seeder.php`): Seeds Campus aggregate `10.10.0.0/16`, core block `10.10.0.0/19`, assignable clinical subnets (`10.10.10.0/24`, `10.10.20.0/24`, `10.10.30.0/24`), RFC 3021 `/31` point-to-point link (`10.10.254.0/31`), isolated VRF clinical block (`10.10.10.0/24`), and IPv6 management prefix (`fd00:6500:1::/64`).
+- [x] Automated Tests: 71 total passing tests (36 newly added for Stage 2) with 266 assertions.
 
 ---
 

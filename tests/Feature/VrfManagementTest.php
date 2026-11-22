@@ -124,3 +124,4 @@ class VrfManagementTest extends TestCase
         $this->assertFalse($this->viewer->can('delete', $customVrf));
     }
 }
+

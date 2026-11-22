@@ -39,3 +39,4 @@ class SitePolicy
         return $user->isSuperAdmin();
     }
 }
+

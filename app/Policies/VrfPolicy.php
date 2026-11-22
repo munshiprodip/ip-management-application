@@ -39,3 +39,4 @@ class VrfPolicy
         return $user->canManageNetwork();
     }
 }
+

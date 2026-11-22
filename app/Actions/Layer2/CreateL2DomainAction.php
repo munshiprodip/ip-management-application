@@ -45,3 +45,4 @@ class CreateL2DomainAction
         });
     }
 }
+

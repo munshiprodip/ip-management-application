@@ -55,3 +55,4 @@ enum VlanSecurityZone: string
         return in_array($this, [self::CLINICAL, self::BIOMEDICAL], true);
     }
 }
+

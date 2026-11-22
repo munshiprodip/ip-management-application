@@ -225,3 +225,4 @@ class VlanManagementTest extends TestCase
         ]);
     }
 }
+

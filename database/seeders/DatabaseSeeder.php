@@ -96,7 +96,10 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // Call Stage 1 Seeder
-        $this->call(Stage1Seeder::class);
+        // Call Stage 1 & Stage 2 Seeders
+        $this->call([
+            Stage1Seeder::class,
+            Stage2Seeder::class,
+        ]);
     }
 }

@@ -32,3 +32,4 @@ class DeleteL2DomainAction
         });
     }
 }
+

@@ -32,3 +32,4 @@ class Department extends Model
         return $this->belongsTo(User::class, 'owner_user_id');
     }
 }
+
