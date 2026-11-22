@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 1.4.0  
+> **Current Version:** 1.5.0  
 > **Last Updated:** 2026-11-22  
-> **Current Stage:** Stage 4 — Pools, IP Explorer, Allocation Engine and Concurrency (COMPLETED)  
-> **Next Stage:** Stage 5 — Requests and Approvals (QUEUED)  
+> **Current Stage:** Stage 5 — Requests and Approvals (COMPLETED)  
+> **Next Stage:** Stage 6 — Safe Discovery & Reconciliation (QUEUED)  
 
 ---
 
@@ -17,11 +17,50 @@
 | **2** | **IP Math & Subnet Hierarchy** | **COMPLETED** | **71/71 Tests Passed** | 128-bit math (Brick\Math), canonical CIDR (T-001), containment (T-002, T-003), non-overlap (T-004), acyclic tree (T-005), /31 & /32 (T-014), /127 & /128 (T-015), CIDR calculator, split preview |
 | **3** | **Device & Interface Inventory** | **COMPLETED** | **97/97 Tests Passed** | Multi-NIC devices, MAC normalization (EUI-48/64), asset tag uniqueness, hardware models, slide-over drawer |
 | **4** | **Pools, IP Explorer & Allocation (MVP)** | **COMPLETED** | **113/113 Tests Passed** | Virtual candidate window, atomic transactions, gates T-006–T-013 & T-024, post-release quarantine, MySQL concurrency harness |
-| 5 | Requests & Approvals | QUEUED | Prerequisite: Stage 4 | Formal segregation of duties, request lifecycle |
+| **5** | **Requests & Approvals** | **COMPLETED** | **124/124 Tests Passed** | Formal segregation of duties (T-022), scoped operator policy (T-021), SLA engine, idempotent provisioning, replay protection |
 | 6 | Safe Discovery & Reconciliation | QUEUED | Prerequisite: Stage 4 | Opt-in read-only evidence collection |
 | 7 | Alerts & Network Views | QUEUED | Prerequisite: Stages 5 & 6 | Deduplication, capacity dashboards |
 | 8 | API & Production Hardening | QUEUED | Prerequisite: Stage 7 | OpenAPI, token scopes, security hardening |
 | 9 | Controlled Handover | QUEUED | Prerequisite: Stage 8 | Pilot onboarding and runbooks |
+
+---
+
+## Stage 5 Execution Record
+
+### Completed Items
+- [x] Domain Enums (`App\Domain\Workflows\Enums`):
+  - `RequestType`: `ip_assignment`, `ip_release`, `ip_transfer`, `subnet_create`, `dhcp_reservation`, `policy_exception`.
+  - `RequestStatus`: `submitted`, `pending_approval`, `approved`, `rejected`, `provisioned`, `cancelled`.
+  - `RequestPriority`: `low` (120h SLA), `normal` (48h SLA), `urgent` (8h SLA), `emergency` (2h SLA).
+  - `ApprovalDecision`: `approved`, `rejected`.
+- [x] Database Migration (`2026_11_22_000501_create_requests_and_approvals_tables.php`):
+  - `ip_requests`: Unique sequential `request_number`, foreign keys to `users` and `departments`, priority, status, SLA due timestamp, `idempotency_key`, execution timestamps.
+  - `request_approvals`: Independent approver audit log, decision, comments, timestamp.
+  - `change_records`: Immutable before/after execution state, actor, result, and correlation UUID.
+- [x] Eloquent Models:
+  - `IpRequest`: Polymorphic `target`, `requester`, `department`, `approvals`, `changeRecords`, `isPending`, `isOverdue`, `isApproverEligible`, and scope filtering `forScope($user)` (**T-021**).
+  - `RequestApproval`: Association with request and independent approver.
+  - `ChangeRecord`: Immutable log of technical changes executed.
+- [x] Domain Services & Actions:
+  - `ApprovalWorkflowService`: Validates two-person rule (**T-022**), status lifecycle, role authority, and department scope.
+  - `SubmitRequestAction`: Idempotency key checking, department operator scope validation (**T-021**), sequential `request_number` generation, priority-based SLA calculation, and `request.submitted` audit logging.
+  - `ApproveRequestAction`: Two-person separation of duties enforcement (**T-022**), atomic row locking, and `request.approved` audit logging.
+  - `RejectRequestAction`: Mandatory rejection reason, status transition, and `request.rejected` audit logging.
+  - `CancelRequestAction`: Requester/admin cancellation of pending changes with `request.cancelled` audit logging.
+  - `ProvisionRequestAction`: Replay protection (idempotent if already provisioned), atomic dispatch to `AllocateIpAction`, `ReleaseIpAction`, `TransferIpAction`, or `ReserveIpAction`, change record creation, and `request.provisioned` audit logging.
+- [x] Policies:
+  - `IpRequestPolicy`: Enforces departmental scope view restrictions (**T-021**), two-person rule approval denial (**T-022**), and administrator-only provisioning.
+- [x] Livewire 4 UI Management (`App\Livewire\Requests\Index`):
+  - 5 KPI summary tiles (Total Requests, Pending Review, Pending My Action [highlighted], Approved Ready, SLA Breached).
+  - Multi-tab filter toolbar (`All Requests`, `Pending My Action`, `My Submissions`, `Pending`, `Approved`, `Provisioned`, `Rejected`).
+  - Search by request number, requester name, reason, type, priority, and department.
+  - Interactive Review slide-over drawer with Two-Person Rule separation-of-duties banner, payload JSON viewer, approval history timeline, and action buttons.
+  - "New Change Request" modal with dynamic parameters for IP assignment, release (with quarantine days), and interface transfer.
+- [x] Database Seeder (`Stage5Seeder.php`):
+  - Seeds ICU Department Operator with scoped permissions, independent approver, pending ICU monitor request, pending radiology workstation request, emergency request nearing SLA breach, and provisioned ultrasound link request.
+- [x] Automated Tests:
+  - 124 total passing tests (11 newly added for Stage 5) with 432 assertions.
+  - Feature tests: `RequestWorkflowTest` (Gates **T-021**, **T-022**, idempotency, SLA, provisioning replay), `LivewireRequestsTest` (UI rendering, separation-of-duties banner, review drawer, submission modal).
 
 ---
 

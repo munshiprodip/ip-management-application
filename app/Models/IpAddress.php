@@ -111,3 +111,4 @@ class IpAddress extends Model
         return IpAddressVO::fromHex($this->address_hex, $this->ip_version);
     }
 }
+

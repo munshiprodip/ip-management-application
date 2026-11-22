@@ -50,3 +50,4 @@ class IpPool extends Model
         return $this->hasMany(IpExclusion::class);
     }
 }
+

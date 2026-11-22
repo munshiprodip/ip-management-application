@@ -62,3 +62,4 @@ class IpReservation extends Model
         return true;
     }
 }
+

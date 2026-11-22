@@ -99,6 +99,36 @@ class User extends Authenticatable
         return $this->isActive() && $this->isNetworkAdmin();
     }
 
+    public function scopes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserScope::class);
+    }
+
+    public function hasScope(string $type, int $id): bool
+    {
+        if ($this->isNetworkAdmin()) {
+            return true;
+        }
+
+        return $this->scopes()
+            ->where('scope_type', $type)
+            ->where('scope_id', $id)
+            ->exists();
+    }
+
+    public function allowedDepartmentIds(): array
+    {
+        if ($this->isNetworkAdmin()) {
+            return [];
+        }
+
+        return $this->scopes()
+            ->where('scope_type', 'department')
+            ->pluck('scope_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
     public function hasRole(UserRole|string|array $roles): bool
     {
         $currentRole = $this->role instanceof UserRole ? $this->role->value : (string) $this->role;

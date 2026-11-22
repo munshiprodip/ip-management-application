@@ -54,3 +54,4 @@ class IpAssignment extends Model
         return $this->released_at === null;
     }
 }
+

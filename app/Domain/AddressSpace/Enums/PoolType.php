@@ -39,3 +39,4 @@ enum PoolType: string
         return in_array($this, [self::STATIC, self::DHCP_RESERVED], true);
     }
 }
+

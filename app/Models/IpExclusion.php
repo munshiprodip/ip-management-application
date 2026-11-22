@@ -35,3 +35,4 @@ class IpExclusion extends Model
         return $this->belongsTo(IpPool::class, 'ip_pool_id');
     }
 }
+

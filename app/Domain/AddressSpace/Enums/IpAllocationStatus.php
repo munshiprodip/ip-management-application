@@ -39,3 +39,4 @@ enum IpAllocationStatus: string
         return in_array($this, [self::ASSIGNED, self::RESERVED, self::QUARANTINED, self::BLOCKED], true);
     }
 }
+

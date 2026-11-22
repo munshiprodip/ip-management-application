@@ -121,3 +121,4 @@ class IpCandidateWindowTest extends TestCase
         $this->assertEquals('192.168.10.254', $window['items'][3]['address']);
     }
 }
+

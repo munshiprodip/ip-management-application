@@ -94,3 +94,4 @@ class MySqlConcurrencyTest extends TestCase
         $this->assertEquals(1, $records);
     }
 }
+
