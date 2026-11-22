@@ -61,6 +61,11 @@ class CandidateWindowGenerator
             ->where('end_hex', '>=', $startHex)
             ->get();
 
+        // Fetch registered host types for fast lookup
+        $hostTypesMap = \Illuminate\Support\Facades\Schema::hasTable('host_types')
+            ? \App\Models\HostType::all()->keyBy('slug')
+            : collect();
+
         $items = [];
         $current = $windowStart;
 
@@ -78,10 +83,40 @@ class CandidateWindowGenerator
                 $assignedTo = $record->assigned_to;
                 $dbId = $record->id;
                 $quarantinedUntil = $record->quarantined_until;
+
+                $htSlug = null;
+                $htLabel = null;
+                $htBadge = null;
+                $htDesc = null;
+
+                if (!empty($hostType)) {
+                    $htSlug = $hostType instanceof \App\Domain\AddressSpace\Enums\HostType
+                        ? $hostType->value
+                        : (string) $hostType;
+
+                    $htModel = $hostTypesMap[$htSlug] ?? null;
+                    if ($htModel) {
+                        $htLabel = $htModel->name;
+                        $htBadge = $htModel->badgeClasses();
+                        $htDesc = $htModel->description;
+                    } elseif ($hostType instanceof \App\Domain\AddressSpace\Enums\HostType) {
+                        $htLabel = $hostType->label();
+                        $htBadge = $hostType->badgeClasses();
+                        $htDesc = $hostType->description();
+                    } else {
+                        $htLabel = \Illuminate\Support\Str::headline($htSlug);
+                        $htBadge = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-medium';
+                        $htDesc = null;
+                    }
+                }
             } else {
                 $status = IpAllocationStatus::UNASSIGNED;
                 $classification = IpClassification::STATIC_HOST;
                 $hostType = null;
+                $htSlug = null;
+                $htLabel = null;
+                $htBadge = null;
+                $htDesc = null;
                 $hostname = null;
                 $macAddress = null;
                 $assignedTo = null;
@@ -113,7 +148,10 @@ class CandidateWindowGenerator
                 'hex' => $hex,
                 'status' => $status,
                 'classification' => $classification,
-                'host_type' => $hostType,
+                'host_type' => $htSlug,
+                'host_type_label' => $htLabel,
+                'host_type_badge' => $htBadge,
+                'host_type_description' => $htDesc,
                 'hostname' => $hostname,
                 'mac_address' => $macAddress,
                 'assigned_to' => $assignedTo,

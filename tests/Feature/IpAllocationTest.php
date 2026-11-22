@@ -246,7 +246,7 @@ class IpAllocationTest extends TestCase
 
         $this->assertEquals('10.10.1.95', $reallocated->address_text);
         $this->assertEquals(IpAllocationStatus::ASSIGNED, $reallocated->allocation_status);
-        $this->assertEquals(HostType::WORKSTATION, $reallocated->host_type);
+        $this->assertEquals('workstation', $reallocated->host_type);
     }
 
     public function test_t015_allocation_with_host_type(): void
@@ -261,7 +261,7 @@ class IpAllocationTest extends TestCase
             'assigned_to' => 'HIS Database Primary Node',
         ], $this->admin);
 
-        $this->assertEquals(HostType::SERVER, $allocated->host_type);
+        $this->assertEquals('server', $allocated->host_type);
         $this->assertDatabaseHas('ip_addresses', [
             'address_text' => '10.10.1.150',
             'host_type' => 'server',

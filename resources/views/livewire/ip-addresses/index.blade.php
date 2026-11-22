@@ -65,7 +65,7 @@
                 >
                     <option value="all">All Host Types</option>
                     @foreach($hostTypes as $ht)
-                        <option value="{{ $ht->value }}">{{ $ht->label() }}</option>
+                        <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }}</option>
                     @endforeach
                 </select>
             </div>
@@ -140,8 +140,8 @@
                             </td>
                             <td class="py-3 px-4 whitespace-nowrap">
                                 @if(!empty($item['host_type']))
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] border {{ $item['host_type']->badgeClasses() }}" title="{{ $item['host_type']->description() }}">
-                                        {{ $item['host_type']->label() }}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] border {{ $item['host_type_badge'] ?? 'bg-slate-100 text-slate-700' }}" title="{{ $item['host_type_description'] ?? '' }}">
+                                        {{ $item['host_type_label'] ?? $item['host_type'] }}
                                     </span>
                                 @else
                                     <span class="text-slate-400 font-mono text-[11px]">—</span>
@@ -341,13 +341,14 @@
                         </div>
 
                         <div>
-                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type *</label>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type</label>
                             <select
                                 wire:model="alloc_host_type"
                                 class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
                             >
+                                <option value="">None / Unspecified</option>
                                 @foreach($hostTypes as $ht)
-                                    <option value="{{ $ht->value }}">{{ $ht->label() }} ({{ $ht->description() }})</option>
+                                    <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }} {{ !empty($ht->description) ? '— ' . $ht->description : '' }}</option>
                                 @endforeach
                             </select>
                             @error('alloc_host_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
@@ -530,10 +531,13 @@
                             <span>{{ $detailIp->assigned_to ?? '—' }}</span>
                         </div>
                         @if($detailIp->host_type)
+                            @php
+                                $htModel = $detailIp->hostTypeModel();
+                            @endphp
                             <div class="flex justify-between items-center">
                                 <span class="text-slate-500">Host Type:</span>
-                                <span class="px-2 py-0.5 rounded text-[11px] border {{ $detailIp->host_type->badgeClasses() }}" title="{{ $detailIp->host_type->description() }}">
-                                    {{ $detailIp->host_type->label() }}
+                                <span class="px-2 py-0.5 rounded text-[11px] border {{ $htModel?->badgeClasses() ?? 'bg-slate-100 text-slate-700' }}" title="{{ $htModel?->description ?? '' }}">
+                                    {{ $htModel?->name ?? $detailIp->host_type }}
                                 </span>
                             </div>
                         @endif
@@ -637,7 +641,7 @@
                             >
                                 <option value="">None / Unspecified</option>
                                 @foreach($hostTypes as $ht)
-                                    <option value="{{ $ht->value }}">{{ $ht->label() }} ({{ $ht->description() }})</option>
+                                    <option value="{{ $ht->slug ?? $ht->value }}">{{ $ht->name ?? $ht->label() }} {{ !empty($ht->description) ? '— ' . $ht->description : '' }}</option>
                                 @endforeach
                             </select>
                             @error('edit_host_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror

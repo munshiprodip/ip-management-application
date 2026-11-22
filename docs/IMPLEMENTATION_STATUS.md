@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 2.3.0 (Streamlined Core Architecture with Host Types & Quarantined Device Management)  
+> **Current Version:** 2.4.0 (Streamlined Core Architecture with Dedicated Host Types Management & Quarantined Device Handling)  
 > **Last Updated:** 2026-11-22  
-> **Architecture Scope:** Focused Core IPAM with Top-Level Site / Campus Segregation (Sites/Campuses, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations)  
-> **Status:** All 85 Automated Tests Passing (100% Pass Rate)
+> **Architecture Scope:** Focused Core IPAM with Top-Level Site / Campus Segregation (Sites/Campuses, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations, Host Types Management)  
+> **Status:** All 95 Automated Tests Passing (100% Pass Rate)
 
 ---
 
@@ -56,24 +56,33 @@ Per architectural requirements, the application delivers focused, enterprise-gra
    - Direct hostname, MAC address, and owner tracking per IP assignment.
    - Target subnets automatically filtered by active campus context.
 
+5. **Host Types Management**
+   - Full administration interface at `/host-types` (`HostTypes\Index`) for managing clinical and enterprise host classes.
+   - Initial 8 built-in hospital system host types: Servers, Workstations, Network equipment, Printers, Wireless, Medical devices, Surveillance, Other / IoT.
+   - Customizable badge color styling (emerald, sky, violet, amber, rose, indigo, slate, cyan, pink, fuchsia).
+   - Dynamic slug generation with system-level immutability protections.
+   - Deletion safety guard: prevents deleting system types or types with active IP allocations.
+   - Active/inactive state toggles for phasing out obsolete categories.
+   - Direct integration into IP allocation forms, quick-edit modals, and candidate window filters.
+
 ---
 
 ## Verification Summary
 
 | Component | Status | Verification Detail |
 |---|---|---|
-| **Automated Unit & Feature Tests** | **PASSED (85/85)** | PHPUnit suite with 310 assertions across models, actions, services, and Livewire components |
-| **Database Schema** | **MIGRATED & SEEDED** | 5 core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses`, `host_type` additions |
-| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 221ms |
+| **Automated Unit & Feature Tests** | **PASSED (95/95)** | PHPUnit suite with 333 assertions across models, actions, services, and Livewire components |
+| **Database Schema** | **MIGRATED & SEEDED** | Core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses`, `host_type` additions, `host_types` table |
+| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 218ms |
 | **Dev Server (Port 8080)** | **RUNNING** | Active and responsive on `http://127.0.0.1:8080` (Daemon task) |
 | **Authentication & RBAC** | **VERIFIED** | SuperAdmin, NetworkAdmin, Operator, ReadOnly with full audit event logging |
 
 ---
 
-## Active Test Inventory (85 Tests)
+## Active Test Inventory (95 Tests)
 
 1. `AuthenticationTest`: 3 tests (login screen, user login, logout).
-2. `EnterpriseShellTest`: 3 tests (layout render, navigation links including campuses, guest redirect).
+2. `EnterpriseShellTest`: 3 tests (layout render, navigation links including campuses & host types, guest redirect).
 3. `AuditLogTest`: 3 tests (record event, capture IP/agent, polymorphic relation).
 4. `UserRoleTest`: 4 tests (superadmin, networkadmin, operator, readonly).
 5. `SafetyFlagsTest`: 2 tests (discovery disabled, external writes disabled).
@@ -86,3 +95,4 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 12. `IpAllocationTest`: 10 tests (allocate, release, reserve, quarantine, pool exclusion, idempotency, audit trail, unquarantine to unassigned, allocation with host type).
 13. `IpCandidateWindowTest`: 4 tests (virtual candidate pagination, status flags).
 14. `LivewireIpExplorerTest`: 5 tests (Livewire explorer rendering, direct IP allocation, query parameter subnet redirection, subnet mask & default gateway rendering, host type assignment & unquarantining).
+15. `HostTypeManagementTest`: 10 tests (list seeded types, create type, auto slug generation, duplicate slug validation, update type, system slug protection, delete guard for active IPs, toggle status, system type delete guard, Livewire CRUD component).

@@ -168,7 +168,7 @@ class Index extends Component
         $this->validate([
             'alloc_ip' => 'required|string',
             'alloc_classification' => 'required|string',
-            'alloc_host_type' => ['required', 'string', 'in:' . implode(',', array_column(HostType::cases(), 'value'))],
+            'alloc_host_type' => ['nullable', 'string', 'max:64'],
         ]);
 
         try {
@@ -176,7 +176,7 @@ class Index extends Component
                 'subnet_id' => $this->selectedSubnetId,
                 'ip_address' => $this->alloc_ip,
                 'classification' => IpClassification::from($this->alloc_classification),
-                'host_type' => HostType::from($this->alloc_host_type),
+                'host_type' => !empty($this->alloc_host_type) ? trim($this->alloc_host_type) : null,
                 'hostname' => !empty($this->alloc_hostname) ? $this->alloc_hostname : null,
                 'mac_address' => !empty($this->alloc_mac_address) ? $this->alloc_mac_address : null,
                 'assigned_to' => !empty($this->alloc_assigned_to) ? $this->alloc_assigned_to : null,
@@ -281,7 +281,7 @@ class Index extends Component
     {
         $this->validate([
             'edit_assigned_to' => ['required', 'string', 'max:255'],
-            'edit_host_type' => ['nullable', 'string', 'in:' . implode(',', array_column(HostType::cases(), 'value'))],
+            'edit_host_type' => ['nullable', 'string', 'max:64'],
             'edit_hostname' => ['nullable', 'string', 'max:255'],
             'edit_mac_address' => ['nullable', 'string', 'max:32'],
             'edit_description' => ['nullable', 'string', 'max:1000'],
@@ -292,7 +292,7 @@ class Index extends Component
             ->where('address_hex', $ipVO->toHex())
             ->first();
 
-        $hostType = !empty($this->edit_host_type) ? HostType::tryFrom($this->edit_host_type) : null;
+        $hostType = !empty($this->edit_host_type) ? trim($this->edit_host_type) : null;
 
         if ($record) {
             $before = $record->toArray();
@@ -413,13 +413,25 @@ class Index extends Component
 
         $detailIp = $this->detailIpId ? IpAddress::with(['assignments.assignedBy', 'reservations.reservedBy'])->find($this->detailIpId) : null;
 
+        $dbHostTypes = \Illuminate\Support\Facades\Schema::hasTable('host_types')
+            ? \App\Models\HostType::where('is_active', true)->orderBy('name')->get()
+            : collect();
+
+        $hostTypesList = $dbHostTypes->isNotEmpty()
+            ? $dbHostTypes
+            : collect(HostType::cases())->map(fn ($c) => (object) [
+                'slug' => $c->value,
+                'name' => $c->label(),
+                'description' => $c->description(),
+            ]);
+
         return view('livewire.ip-addresses.index', [
             'subnets' => $subnets,
             'selectedSubnet' => $selectedSubnet,
             'windowData' => $windowData,
             'detailIp' => $detailIp,
             'classifications' => IpClassification::cases(),
-            'hostTypes' => HostType::cases(),
+            'hostTypes' => $hostTypesList,
         ]);
     }
 }

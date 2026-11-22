@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Version 2.1.0 Core Architecture with Top-Level Campus Segregation Delivered  
+> **Status:** Version 2.4.0 Core Architecture with Top-Level Campus Segregation & Host Types Management Delivered  
 > **Updated:** 2026-11-22  
 
 This matrix maps core functional requirements and active modules of the streamlined KYAMCH Smart IPAM application to database tables, domain services, Livewire UI components, and automated test coverage.
@@ -17,7 +17,8 @@ This matrix maps core functional requirements and active modules of the streamli
 | **M02** | **802.1Q VLAN Management** | `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction` | `VlanManagementTest` | **ACTIVE** |
 | **M03** | **Subnets & CIDR Hierarchy** | `subnets` | `/subnets`, `Subnets\Index`, `_subnet-row` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `CreateSubnetAction`, `UpdateSubnetAction`, `DeleteSubnetAction` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` | **ACTIVE** |
 | **M04** | **Address Pools & Exclusions** | `ip_pools`, `ip_exclusions` | `/ip-addresses`, `IPAddresses\Index` | `AllocateIpAction` (Pool & exclusion validation) | `IpAllocationTest` | **ACTIVE** |
-| **M05** | **IP Address Explorer & Allocations** | `ip_addresses`, `ip_assignments`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator`, `AllocateIpAction`, `ReleaseIpAction`, `ReserveIpAction` | `IpAllocationTest`, `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **ACTIVE** |
+| **M05** | **IP Address Explorer & Allocations** | `ip_addresses`, `ip_assignments`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator`, `AllocateIpAction`, `ReleaseIpAction`, `ReserveIpAction`, `UnquarantineIpAction` | `IpAllocationTest`, `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **ACTIVE** |
+| **M14** | **Host Types Management** | `host_types` | `/host-types`, `HostTypes\Index` | `CreateHostTypeAction`, `UpdateHostTypeAction`, `DeleteHostTypeAction` | `HostTypeManagementTest` | **ACTIVE** |
 
 ---
 

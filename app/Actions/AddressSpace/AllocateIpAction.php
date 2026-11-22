@@ -61,12 +61,14 @@ class AllocateIpAction
             }
         }
 
-        // Resolve Host Type if provided
+        // Resolve Host Type if provided (supports both Enum and dynamic DB slug)
         $hostType = null;
         if (!empty($data['host_type'])) {
-            $hostType = $data['host_type'] instanceof HostType
-                ? $data['host_type']
-                : HostType::tryFrom((string) $data['host_type']);
+            if ($data['host_type'] instanceof HostType) {
+                $hostType = $data['host_type']->value;
+            } elseif (is_string($data['host_type'])) {
+                $hostType = trim($data['host_type']);
+            }
         }
 
         // 2. Candidate Resolution (Auto vs Explicit)

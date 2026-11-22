@@ -43,7 +43,7 @@ class IpAddress extends Model
             'ip_version' => 'integer',
             'allocation_status' => IpAllocationStatus::class,
             'classification' => IpClassification::class,
-            'host_type' => HostType::class,
+            'host_type' => 'string',
             'assigned_at' => 'datetime',
             'quarantined_until' => 'datetime',
         ];

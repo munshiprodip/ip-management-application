@@ -33,7 +33,7 @@ class IpAssignment extends Model
     protected function casts(): array
     {
         return [
-            'host_type' => HostType::class,
+            'host_type' => 'string',
             'assigned_at' => 'datetime',
             'released_at' => 'datetime',
         ];
