@@ -59,6 +59,15 @@ class Index extends Component
     public bool $showDetailsDrawer = false;
     public ?int $detailIpId = null;
 
+    // Edit Assignment Modal
+    public bool $showEditModal = false;
+    public ?int $editIpId = null;
+    public string $edit_ip_text = '';
+    public string $edit_assigned_to = '';
+    public string $edit_hostname = '';
+    public string $edit_mac_address = '';
+    public string $edit_description = '';
+
     public function mount(SiteContext $siteContext, ?int $subnet = null): void
     {
         $requestedSubnetId = $subnet ?? $this->selectedSubnetId ?? (request()->query('subnet') ? (int) request()->query('subnet') : null);
@@ -231,6 +240,90 @@ class Index extends Component
     {
         $this->detailIpId = $ipId;
         $this->showDetailsDrawer = true;
+    }
+
+    public function openEditAssignmentModal(string $ipText): void
+    {
+        $this->edit_ip_text = $ipText;
+        $ipVO = IpAddressVO::parse($ipText);
+        $record = IpAddress::where('subnet_id', $this->selectedSubnetId)
+            ->where('address_hex', $ipVO->toHex())
+            ->first();
+
+        if ($record) {
+            $this->editIpId = $record->id;
+            $this->edit_assigned_to = (string) $record->assigned_to;
+            $this->edit_hostname = (string) $record->hostname;
+            $this->edit_mac_address = (string) $record->mac_address;
+            $this->edit_description = (string) $record->description;
+        } else {
+            $this->editIpId = null;
+            $this->edit_assigned_to = '';
+            $this->edit_hostname = '';
+            $this->edit_mac_address = '';
+            $this->edit_description = '';
+        }
+
+        $this->showEditModal = true;
+    }
+
+    public function saveAssignmentEdit(): void
+    {
+        $this->validate([
+            'edit_assigned_to' => ['required', 'string', 'max:255'],
+            'edit_hostname' => ['nullable', 'string', 'max:255'],
+            'edit_mac_address' => ['nullable', 'string', 'max:32'],
+            'edit_description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $ipVO = IpAddressVO::parse($this->edit_ip_text);
+        $record = IpAddress::where('subnet_id', $this->selectedSubnetId)
+            ->where('address_hex', $ipVO->toHex())
+            ->first();
+
+        if ($record) {
+            $before = $record->toArray();
+            $record->update([
+                'assigned_to' => trim($this->edit_assigned_to),
+                'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
+                'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
+                'description' => $this->edit_description ? trim($this->edit_description) : null,
+            ]);
+
+            // Also update current active assignment record if exists
+            $assignment = $record->currentAssignment;
+            if ($assignment) {
+                $assignment->update([
+                    'assigned_to' => trim($this->edit_assigned_to),
+                    'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
+                    'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
+                ]);
+            }
+
+            \App\Models\AuditEvent::record(
+                eventType: 'ip.assignment_updated',
+                reason: "Updated assigned details for IP {$record->address_text}",
+                subject: $record,
+                before: $before,
+                after: $record->fresh()->toArray()
+            );
+
+            session()->flash('success', "Assigned To details for IP {$this->edit_ip_text} updated successfully.");
+        } else {
+            $allocateAction = app(\App\Actions\AddressSpace\AllocateIpAction::class);
+            $allocateAction->execute([
+                'subnet_id' => $this->selectedSubnetId,
+                'ip_address' => $this->edit_ip_text,
+                'assigned_to' => trim($this->edit_assigned_to),
+                'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
+                'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
+                'description' => $this->edit_description ? trim($this->edit_description) : null,
+            ], auth()->user());
+
+            session()->flash('success', "IP {$this->edit_ip_text} assigned to '{$this->edit_assigned_to}' successfully.");
+        }
+
+        $this->showEditModal = false;
     }
 
     public function render()

@@ -114,6 +114,8 @@ class CandidateWindowGenerator
                 'hostname' => $hostname,
                 'mac_address' => $macAddress,
                 'assigned_to' => $assignedTo,
+                'netmask' => $subnet->netmask(),
+                'gateway' => $subnet->defaultGateway(),
                 'pool_name' => $poolName,
                 'quarantined_until' => $quarantinedUntil,
             ];

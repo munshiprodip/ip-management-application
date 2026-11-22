@@ -59,7 +59,13 @@
         </div>
 
         @if($selectedSubnet)
-            <div class="flex items-center gap-3 text-xs font-mono">
+            <div class="flex flex-wrap items-center gap-2.5 text-xs font-mono">
+                <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold" title="Subnet Mask">
+                    Mask: <span class="text-emerald-700 dark:text-emerald-300">{{ $selectedSubnet->netmask() }}</span>
+                </span>
+                <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold" title="Default Gateway">
+                    Gateway: <span class="text-blue-700 dark:text-blue-300">{{ $selectedSubnet->defaultGateway() }}</span>
+                </span>
                 <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                     {{ $selectedSubnet->usableAddressesFormatted() }} Usable Hosts
                 </span>
@@ -80,9 +86,11 @@
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-mono uppercase text-[11px]">
                         <th class="py-3 px-4">Candidate IP</th>
                         <th class="py-3 px-4">Status</th>
-                        <th class="py-3 px-4">Hostname / Assigned To</th>
+                        <th class="py-3 px-4">Hostname</th>
+                        <th class="py-3 px-4">Assigned To</th>
+                        <th class="py-3 px-4">Subnet Mask</th>
+                        <th class="py-3 px-4">Default Gateway</th>
                         <th class="py-3 px-4">MAC Address</th>
-                        <th class="py-3 px-4">Pool / Range</th>
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -116,27 +124,42 @@
                                     </span>
                                 @endif
                             </td>
+                            <td class="py-3 px-4 font-mono text-[11px] text-slate-800 dark:text-slate-200">
+                                {{ $item['hostname'] ?? '—' }}
+                            </td>
                             <td class="py-3 px-4">
-                                @if($item['hostname'] || $item['assigned_to'])
-                                    <div class="font-medium text-slate-800 dark:text-slate-200">{{ $item['hostname'] ?? '—' }}</div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
                                     @if($item['assigned_to'])
-                                        <div class="text-[11px] text-slate-500">{{ $item['assigned_to'] }}</div>
+                                        <span class="font-medium text-slate-800 dark:text-slate-200">{{ $item['assigned_to'] }}</span>
+                                        <button
+                                            wire:click="openEditAssignmentModal('{{ $item['ip_text'] }}')"
+                                            type="button"
+                                            class="p-0.5 text-slate-400 hover:text-emerald-600 rounded transition"
+                                            title="Edit Assigned To"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                        </button>
+                                    @elseif($statusStr === 'assigned')
+                                        <button
+                                            wire:click="openEditAssignmentModal('{{ $item['ip_text'] }}')"
+                                            type="button"
+                                            class="inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 font-medium"
+                                        >
+                                            <span>+ Set Assigned To</span>
+                                        </button>
+                                    @else
+                                        <span class="text-slate-400 font-mono text-[11px]">—</span>
                                     @endif
-                                @else
-                                    <span class="text-slate-400 font-mono text-[11px]">—</span>
-                                @endif
+                                </div>
+                            </td>
+                            <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                {{ $item['netmask'] ?? ($selectedSubnet ? $selectedSubnet->netmask() : '—') }}
+                            </td>
+                            <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                {{ $item['gateway'] ?? ($selectedSubnet ? $selectedSubnet->defaultGateway() : '—') }}
                             </td>
                             <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                                 {{ $item['mac_address'] ?? '—' }}
-                            </td>
-                            <td class="py-3 px-4">
-                                @if($item['pool_name'])
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-mono">
-                                        {{ $item['pool_name'] }}
-                                    </span>
-                                @else
-                                    <span class="text-slate-400 font-mono text-[11px]">—</span>
-                                @endif
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-1.5">
@@ -155,21 +178,31 @@
                                         >
                                             Reserve
                                         </button>
-                                    @elseif($statusStr === 'assigned' && $item['id'])
+                                    @elseif($statusStr === 'assigned')
                                         <button
-                                            wire:click="openReleaseModal({{ $item['id'] }})"
+                                            wire:click="openEditAssignmentModal('{{ $item['ip_text'] }}')"
                                             type="button"
-                                            class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-semibold transition"
+                                            class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[11px] font-semibold transition"
+                                            title="Edit Assigned To & Hostname"
                                         >
-                                            Release
+                                            Edit
                                         </button>
-                                        <button
-                                            wire:click="viewDetails({{ $item['id'] }})"
-                                            type="button"
-                                            class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition"
-                                        >
-                                            Details
-                                        </button>
+                                        @if($item['id'])
+                                            <button
+                                                wire:click="openReleaseModal({{ $item['id'] }})"
+                                                type="button"
+                                                class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-semibold transition"
+                                            >
+                                                Release
+                                            </button>
+                                            <button
+                                                wire:click="viewDetails({{ $item['id'] }})"
+                                                type="button"
+                                                class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] transition"
+                                            >
+                                                Details
+                                            </button>
+                                        @endif
                                     @elseif($item['id'])
                                         <button
                                             wire:click="viewDetails({{ $item['id'] }})"
@@ -481,6 +514,75 @@
                         Close Drawer
                     </button>
                 </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Edit Assignment Modal -->
+    @if($showEditModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Edit IP Assignment Details</h3>
+                        <p class="text-xs text-slate-500 font-mono mt-0.5">IP: {{ $edit_ip_text }} (Mask: {{ $selectedSubnet?->netmask() }}, GW: {{ $selectedSubnet?->defaultGateway() }})</p>
+                    </div>
+                    <button wire:click="$set('showEditModal', false)" type="button" class="text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+
+                <form wire:submit="saveAssignmentEdit" class="space-y-4 text-xs">
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned To (Device / User / Bed / Station) *</label>
+                        <input
+                            wire:model="edit_assigned_to"
+                            type="text"
+                            placeholder="e.g. ICU Bed 1 Patient Monitor or Dr. Room 3"
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 font-medium"
+                        />
+                        @error('edit_assigned_to') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Hostname (FQDN)</label>
+                            <input
+                                wire:model="edit_hostname"
+                                type="text"
+                                placeholder="host.kyamch.local"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label>
+                            <input
+                                wire:model="edit_mac_address"
+                                type="text"
+                                placeholder="AA:BB:CC:DD:EE:FF"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono uppercase focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Description / Notes</label>
+                        <textarea
+                            wire:model="edit_description"
+                            rows="2"
+                            placeholder="Notes on hardware, room location, port, or vendor..."
+                            class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+                        <button wire:click="$set('showEditModal', false)" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold shadow-xs transition">
+                            Save Assignment Details
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     @endif

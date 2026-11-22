@@ -180,6 +180,23 @@ class Subnet extends Model
         return number_format((int) (string) $usable);
     }
 
+    public function netmask(): string
+    {
+        $prefix = $this->toIpPrefix();
+        if ($prefix->version() === 4) {
+            $maskBits = $prefix->prefixLength();
+            $maskInt = ($maskBits === 0) ? 0 : (~0 << (32 - $maskBits)) & 0xFFFFFFFF;
+            return long2ip($maskInt);
+        }
+
+        return '/' . $prefix->prefixLength();
+    }
+
+    public function defaultGateway(): string
+    {
+        return $this->toIpPrefix()->firstUsableAddress()->toNormalizedString();
+    }
+
     /**
      * Get ancestry chain from root down to this subnet.
      *

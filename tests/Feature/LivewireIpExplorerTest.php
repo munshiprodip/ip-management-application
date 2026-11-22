@@ -89,4 +89,34 @@ class LivewireIpExplorerTest extends TestCase
             ->assertSee('10.60.1.0/24')
             ->assertSee('10.60.1.1');
     }
+
+    public function test_livewire_ip_explorer_displays_mask_gateway_and_edits_assigned_to(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Render IP Explorer: should show Subnet Mask & Default Gateway, and not show Pool / Range
+        $component = Livewire::test(IpAddressesIndex::class)
+            ->assertStatus(200)
+            ->set('selectedSubnetId', $this->subnet->id)
+            ->assertSee('255.255.255.0')
+            ->assertSee('10.50.1.1')
+            ->assertSee('Subnet Mask')
+            ->assertSee('Default Gateway')
+            ->assertDontSee('Pool / Range');
+
+        // Edit Assigned To for 10.50.1.20
+        $component->call('openEditAssignmentModal', '10.50.1.20')
+            ->assertSet('showEditModal', true)
+            ->set('edit_assigned_to', 'Dr. Consulting Desk 3')
+            ->set('edit_hostname', 'dr-desk-03.kyamch.local')
+            ->call('saveAssignmentEdit')
+            ->assertHasNoErrors()
+            ->assertSet('showEditModal', false);
+
+        $this->assertDatabaseHas('ip_addresses', [
+            'address_text' => '10.50.1.20',
+            'assigned_to' => 'Dr. Consulting Desk 3',
+            'hostname' => 'dr-desk-03.kyamch.local',
+        ]);
+    }
 }
