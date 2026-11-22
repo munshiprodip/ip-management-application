@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 2.6.0 (Streamlined Core Architecture with Subnet Mask & Default Gateway Configurations on Subnets)  
+> **Current Version:** 2.7.0 (Dynamic Top Subnet Mask & Gateway Context Bar with Streamlined IP Candidate Table)  
 > **Last Updated:** 2026-11-22  
 > **Architecture Scope:** Focused Core IPAM with Top-Level Site / Campus Segregation (Sites/Campuses, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations, Host Types Management)  
-> **Status:** All 100 Automated Tests Passing (100% Pass Rate)
+> **Status:** All 101 Automated Tests Passing (100% Pass Rate)
 
 ---
 
@@ -41,9 +41,14 @@ Per architectural requirements, the application delivers focused, enterprise-gra
    - Campus site tagging (site-specific vs global shared infrastructure).
    - Audit trail of VLAN provisioning and lifecycle changes.
 
-4. **IP Address Explorer & Safe Allocation**
+4. **IP Address Explorer & Safe Allocation (Streamlined Candidate Window)**
    - Sparse virtual candidate window generation (no heavy host pre-materialization).
    - Atomic IP allocation, release, and reservation with row-level database locking.
+   - **Dynamic Top Subnet Context Bar**:
+     - Instant dynamic updates of Subnet Mask and Default Gateway whenever the target subnet selector changes.
+     - Prominent Subnet Mask (`255.255.255.0` format) and Default Gateway cards on top alongside Usable Hosts count and linked VLAN tag.
+     - Eliminates per-host column redundancy by removing Subnet Mask and Default Gateway from the candidate table.
+     - Candidate table streamlined to 7 high-value columns: `Candidate IP`, `Status`, `Host Type`, `Hostname`, `Assigned To`, `MAC Address`, `Actions`.
    - Dedicated **Host Type** classification covering 8 enterprise device classes:
      - `Servers`: Database, HIS, application, VM hosts
      - `Workstations`: PCs, laptops, thin clients
@@ -53,7 +58,6 @@ Per architectural requirements, the application delivers focused, enterprise-gra
      - `Medical devices`: Connected clinical equipment
      - `Surveillance`: CCTV, NVR, access control
      - `Other / IoT`: UPS, sensors, virtual device
-   - Dedicated Subnet Mask (`255.255.255.0` format) and Default Gateway (first usable host) displayed in context bar and table columns.
    - Separate Hostname and Assigned To columns with inline editing and quick edit modal.
    - Direct Host Type filter toolbar in explorer.
    - **Quarantined Device Management**: One-click "Make Unassigned" action on quarantined rows and within Details Drawer, backed by atomic `UnquarantineIpAction` and audit trail.
@@ -71,12 +75,14 @@ Per architectural requirements, the application delivers focused, enterprise-gra
    - Active/inactive state toggles for phasing out obsolete categories.
    - Direct integration into IP allocation forms, quick-edit modals, and candidate window filters.
 
-6. **Universal Searchable Select Dropdowns (`<x-searchable-select>`)**
-   - Replaced all 25 native `<select>` elements with enterprise searchable comboboxes.
-   - **Click Autofocus**: Clicking any dropdown immediately auto-focuses the search input field for instant operator typing without extra clicks.
-   - Real-time case-insensitive option filtering across labels and values.
+6. **Universal Searchable Select Dropdowns (`<x-searchable-select>`) with Two-Way Livewire Sync**
+   - Comboboxes with instant autofocus on click for operator typing without extra clicks.
+   - Case-insensitive live filtering across labels and values.
    - Full keyboard navigation (Arrow Down, Arrow Up, Enter, Escape).
-   - Seamless two-way integration with Livewire DOM morphs and form submissions via MutationObserver.
+   - **Full Two-Way Livewire 3/4 Reactivity**:
+     - Automatically resolves `$wire` or `[wire:id]` ancestor.
+     - Updates Livewire properties directly via `lw.set(wireModel, finalVal)` on option selection.
+     - Automatically synchronizes Alpine selection state when Livewire property changes from external triggers or URL query parameters.
 
 7. **Production-Clean UI & Dashboard Host Type Breakdown**
    - Removed all development/stage information (DB driver tag, timezone pill, safety status banners, version tags, dev accounts header).
@@ -88,9 +94,9 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 
 | Component | Status | Verification Detail |
 |---|---|---|
-| **Automated Unit & Feature Tests** | **PASSED (100/100)** | PHPUnit suite with 362 assertions across models, actions, services, and Livewire components |
+| **Automated Unit & Feature Tests** | **PASSED (101/101)** | PHPUnit suite with 372 assertions across models, actions, services, and Livewire components |
 | **Database Schema** | **MIGRATED & SEEDED** | 7 core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses`, `host_type` additions, `host_types` table, `gateway_and_subnet_mask_to_subnets` |
-| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 222ms |
+| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 190ms |
 | **Dev Server (Port 8080)** | **RUNNING** | Active and responsive on `http://127.0.0.1:8080` (Daemon task) |
 | **Authentication & RBAC** | **VERIFIED** | SuperAdmin, NetworkAdmin, Operator, ReadOnly with full audit event logging |
 

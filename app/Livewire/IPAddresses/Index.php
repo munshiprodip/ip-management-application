@@ -112,9 +112,23 @@ class Index extends Component
         $this->selectedSubnetId = $firstSubnet?->id;
     }
 
-    public function updatedSelectedSubnetId(): void
+    public function updatedSelectedSubnetId($value = null): void
     {
         $this->currentPage = 1;
+
+        $targetId = $value ? (int) $value : $this->selectedSubnetId;
+        if ($targetId) {
+            $targetSubnet = Subnet::find($targetId);
+            if ($targetSubnet && $targetSubnet->site_id && $targetSubnet->site_id !== app(SiteContext::class)->getActiveSiteId()) {
+                app(SiteContext::class)->setActiveSiteId($targetSubnet->site_id);
+            }
+        }
+    }
+
+    public function selectSubnet(int $subnetId): void
+    {
+        $this->selectedSubnetId = $subnetId;
+        $this->updatedSelectedSubnetId($subnetId);
     }
 
     public function nextPage(): void

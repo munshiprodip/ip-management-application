@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Version 2.6.0 Core Architecture with Subnet Mask & Gateway Subnet Management  
+> **Status:** Version 2.7.0 Core Architecture with Dynamic Top Subnet Context Bar & Streamlined IP Explorer  
 > **Updated:** 2026-11-22  
 
 This matrix maps core functional requirements and active modules of the streamlined KYAMCH Smart IPAM application to database tables, domain services, Livewire UI components, and automated test coverage.

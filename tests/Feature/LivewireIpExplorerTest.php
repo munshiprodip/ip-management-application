@@ -176,4 +176,35 @@ class LivewireIpExplorerTest extends TestCase
             'host_type' => 'network',
         ]);
     }
+
+    public function test_changing_selected_subnet_updates_top_gateway_and_mask_and_removes_table_columns(): void
+    {
+        $this->actingAs($this->admin);
+
+        $action = app(CreateSubnetAction::class);
+        $telemetrySubnet = $action->execute([
+            'name' => 'Telemetry Wireless Subnet',
+            'cidr' => '10.90.5.0/24',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+            'allocation_enabled' => true,
+            'gateway' => '10.90.5.254',
+            'subnet_mask' => '255.255.255.0',
+        ]);
+
+        $component = Livewire::test(IpAddressesIndex::class)
+            ->set('selectedSubnetId', $this->subnet->id)
+            ->assertSee('10.50.1.1')
+            ->assertSee('Subnet Mask:')
+            ->assertSee('Default Gateway:')
+            ->assertSee('255.255.255.0')
+            ->assertSee('10.50.1.1')
+            ->assertDontSee('<th class="py-3 px-4">Subnet Mask</th>', false)
+            ->assertDontSee('<th class="py-3 px-4">Default Gateway</th>', false);
+
+        // Switch to the telemetry subnet
+        $component->set('selectedSubnetId', $telemetrySubnet->id)
+            ->assertSee('10.90.5.254')
+            ->assertSee('10.90.5.1')
+            ->assertDontSee('10.50.1.15');
+    }
 }

@@ -27,11 +27,44 @@ function registerSearchableSelect() {
                         this.syncFromSelect();
                     });
                     observer.observe(select, { childList: true, subtree: true, attributes: true });
+
+                    // Watch Livewire model changes if component has $wire
+                    try {
+                        let wireModel = null;
+                        for (let attr of select.attributes) {
+                            if (attr.name === 'wire:model' || attr.name.startsWith('wire:model.')) {
+                                wireModel = attr.value;
+                                break;
+                            }
+                        }
+                        if (wireModel && this.$wire) {
+                            this.$watch(`$wire.${wireModel}`, (newVal) => {
+                                if (select && select.value != newVal) {
+                                    select.value = newVal;
+                                }
+                                this.syncFromSelect();
+                            });
+                        }
+                    } catch (e) {}
                 }
 
                 this.$watch('search', () => {
                     this.highlightIndex = 0;
                 });
+            },
+
+            getLivewire() {
+                try {
+                    if (this.$wire) return this.$wire;
+                } catch (e) {}
+                try {
+                    const select = this.$el.querySelector('select');
+                    const root = (select || this.$el).closest('[wire\\:id]');
+                    if (root && window.Livewire) {
+                        return window.Livewire.find(root.getAttribute('wire:id'));
+                    }
+                } catch (e) {}
+                return null;
             },
 
             syncFromSelect() {
@@ -100,8 +133,38 @@ function registerSearchableSelect() {
                 const select = this.$el.querySelector('select');
                 if (select) {
                     select.value = val;
-                    select.dispatchEvent(new Event('change', { bubbles: true }));
                     select.dispatchEvent(new Event('input', { bubbles: true }));
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    // Direct Livewire integration
+                    try {
+                        const lw = this.getLivewire();
+                        if (lw) {
+                            let wireModel = null;
+                            for (let attr of select.attributes) {
+                                if (attr.name === 'wire:model' || attr.name.startsWith('wire:model.')) {
+                                    wireModel = attr.value;
+                                    break;
+                                }
+                            }
+                            if (wireModel) {
+                                const numVal = Number(val);
+                                const finalVal = (!isNaN(numVal) && String(numVal) === String(val).trim()) ? numVal : val;
+                                lw.set(wireModel, finalVal);
+                            }
+
+                            const wireChange = select.getAttribute('wire:change');
+                            if (wireChange) {
+                                if (wireChange.includes('(')) {
+                                    lw.$call(wireChange);
+                                } else {
+                                    lw.call(wireChange, val);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[searchableSelect] Livewire sync error:', e);
+                    }
                 }
                 this.selectedValue = val;
                 const opt = this.options.find(o => String(o.value) === String(val));

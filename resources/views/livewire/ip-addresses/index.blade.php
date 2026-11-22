@@ -91,19 +91,25 @@
 
         @if($selectedSubnet)
             <div class="flex flex-wrap items-center gap-2.5 text-xs font-mono">
-                <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold" title="Subnet Mask">
-                    Mask: <span class="text-emerald-700 dark:text-emerald-300">{{ $selectedSubnet->netmask() }}</span>
-                </span>
-                <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold" title="Default Gateway">
-                    Gateway: <span class="text-blue-700 dark:text-blue-300">{{ $selectedSubnet->defaultGateway() }}</span>
-                </span>
-                <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                    {{ $selectedSubnet->usableAddressesFormatted() }} Usable Hosts
-                </span>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-2xs">
+                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold uppercase text-[10px]">Subnet Mask:</span>
+                    <span class="font-bold text-slate-900 dark:text-white">{{ $selectedSubnet->netmask() }}</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 shadow-2xs">
+                    <span class="text-blue-700 dark:text-blue-400 font-semibold uppercase text-[10px]">Default Gateway:</span>
+                    <span class="font-bold text-slate-900 dark:text-white">{{ $selectedSubnet->defaultGateway() }}</span>
+                </div>
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 shadow-2xs">
+                    <span class="font-bold text-slate-900 dark:text-white">{{ $selectedSubnet->usableAddressesFormatted() }}</span>
+                    <span>Usable Hosts</span>
+                </div>
                 @if($selectedSubnet->vlan)
-                    <span class="px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                        VLAN {{ $selectedSubnet->vlan->vlan_id }}
-                    </span>
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold shadow-2xs">
+                        <span>VLAN {{ $selectedSubnet->vlan->vlan_id }}</span>
+                        @if($selectedSubnet->vlan->name)
+                            <span class="text-[10px] font-normal text-indigo-500">({{ $selectedSubnet->vlan->name }})</span>
+                        @endif
+                    </div>
                 @endif
             </div>
         @endif
@@ -120,8 +126,6 @@
                         <th class="py-3 px-4">Host Type</th>
                         <th class="py-3 px-4">Hostname</th>
                         <th class="py-3 px-4">Assigned To</th>
-                        <th class="py-3 px-4">Subnet Mask</th>
-                        <th class="py-3 px-4">Default Gateway</th>
                         <th class="py-3 px-4">MAC Address</th>
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
@@ -192,12 +196,6 @@
                                         <span class="text-slate-400 font-mono text-[11px]">—</span>
                                     @endif
                                 </div>
-                            </td>
-                            <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                                {{ $item['netmask'] ?? ($selectedSubnet ? $selectedSubnet->netmask() : '—') }}
-                            </td>
-                            <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                                {{ $item['gateway'] ?? ($selectedSubnet ? $selectedSubnet->defaultGateway() : '—') }}
                             </td>
                             <td class="py-3 px-4 font-mono text-[11px] text-slate-600 dark:text-slate-300">
                                 {{ $item['mac_address'] ?? '—' }}
@@ -276,7 +274,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="py-8 px-4 text-center text-slate-400">
+                            <td colspan="7" class="py-8 px-4 text-center text-slate-400">
                                 @if($selectedSubnet)
                                     No addresses matching criteria in candidate window.
                                 @else
