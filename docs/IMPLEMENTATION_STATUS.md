@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 1.3.0  
+> **Current Version:** 1.4.0  
 > **Last Updated:** 2026-11-22  
-> **Current Stage:** Stage 3 — Device and Interface Inventory (COMPLETED)  
-> **Next Stage:** Stage 4 — Pools, IP Explorer, Allocation Engine and Concurrency (MVP Completion)  
+> **Current Stage:** Stage 4 — Pools, IP Explorer, Allocation Engine and Concurrency (COMPLETED)  
+> **Next Stage:** Stage 5 — Requests and Approvals (QUEUED)  
 
 ---
 
@@ -16,12 +16,56 @@
 | **1** | **Organization, Permissions, VRF & VLANs** | **COMPLETED** | **35/35 Tests Passed** | Organizations, Sites, Departments, Locations, Default VRF, L2 Domains, 802.1Q VLANs |
 | **2** | **IP Math & Subnet Hierarchy** | **COMPLETED** | **71/71 Tests Passed** | 128-bit math (Brick\Math), canonical CIDR (T-001), containment (T-002, T-003), non-overlap (T-004), acyclic tree (T-005), /31 & /32 (T-014), /127 & /128 (T-015), CIDR calculator, split preview |
 | **3** | **Device & Interface Inventory** | **COMPLETED** | **97/97 Tests Passed** | Multi-NIC devices, MAC normalization (EUI-48/64), asset tag uniqueness, hardware models, slide-over drawer |
-| 4 | Pools, IP Explorer & Allocation (MVP) | READY TO START | Prerequisite: Stages 2 & 3 | Atomic transactions, MySQL concurrency, quarantine |
-| 5 | Requests & Approvals | QUEUED | Prerequisite: Stage 4 | Formal segregation of duties |
+| **4** | **Pools, IP Explorer & Allocation (MVP)** | **COMPLETED** | **113/113 Tests Passed** | Virtual candidate window, atomic transactions, gates T-006–T-013 & T-024, post-release quarantine, MySQL concurrency harness |
+| 5 | Requests & Approvals | QUEUED | Prerequisite: Stage 4 | Formal segregation of duties, request lifecycle |
 | 6 | Safe Discovery & Reconciliation | QUEUED | Prerequisite: Stage 4 | Opt-in read-only evidence collection |
 | 7 | Alerts & Network Views | QUEUED | Prerequisite: Stages 5 & 6 | Deduplication, capacity dashboards |
 | 8 | API & Production Hardening | QUEUED | Prerequisite: Stage 7 | OpenAPI, token scopes, security hardening |
 | 9 | Controlled Handover | QUEUED | Prerequisite: Stage 8 | Pilot onboarding and runbooks |
+
+---
+
+## Stage 4 Execution Record
+
+### Completed Items
+- [x] Domain Enums (`App\Domain\AddressSpace\Enums`):
+  - `IpAllocationStatus`: `unassigned`, `assigned`, `reserved`, `quarantined`, `blocked`.
+  - `IpConnectivityStatus`: `unobserved`, `observed_online`, `observed_offline`.
+  - `IpClassification`: `host`, `gateway`, `broadcast`, `network`, `vip`, `loopback`, `dhcp_pool`, `point_to_point`.
+  - `PoolType`: `static_allocation`, `dhcp_dynamic`, `dhcp_reservation`, `vip_pool`, `quarantine`.
+  - `AllocationStrategy`: `sequential_lowest`, `sequential_highest`, `random`.
+  - `ReservationStatus`: `active`, `converted`, `expired`, `cancelled`.
+- [x] Database Migration (`2026_11_22_000401_create_ip_pools_and_addresses_tables.php`):
+  - `ip_pools`: Scope by subnet and VRF, defined by `start_hex` and `end_hex`, type and strategy, capacity tracking.
+  - `ip_exclusions`: Range-bounded exclusion windows within subnets to protect gateways, VIPs, and external appliances.
+  - `ip_addresses`: Core authoritative entity with composite unique index `(vrf_id, ip_version, address_hex)` enforcing per-VRF uniqueness (**T-006**, **T-007**); distinct `allocation_status` and `connectivity_status`; reverse DNS pointers; quarantine expiration timestamp.
+  - `ip_assignments`: Historical tracking of IP binds with nullable `interface_id` (supporting host NICs and virtual VIPs), `assigned_by`, `assigned_at`, `released_at`, `release_reason`.
+  - `ip_reservations`: Time-bounded hold on IP addresses with `expires_at`, tracking requester, approver, and purpose.
+- [x] Eloquent Models:
+  - `IpPool`, `IpExclusion`, `IpAddress`, `IpAssignment`, `IpReservation`.
+  - Updated `Subnet` model with `pools()`, `exclusions()`, `ipAddresses()`, and `allocatedCount()` preventing parent capacity double counting (**T-024**).
+- [x] Domain Services & Actions:
+  - `CandidateWindowGenerator`: Safe 50-IP virtual pagination using 128-bit integer math without materializing unallocated host spaces; overlays materialized DB records, exclusions, and dynamic pools in real-time.
+  - `PoolValidationService`: Validates start/end within subnet, detects dynamic DHCP pool conflicts (**T-009**), and checks exclusions.
+  - `IpAllocationService`: Sequential lowest/highest candidate finder matching unallocated host slots.
+  - `AllocateIpAction`: Validates assignable leaf subnet, checks exclusions/DHCP pools (**T-009**), executes atomic database transaction with `lockForUpdate` row locking and bounded retry (**T-010**), strictly rejects offline-but-assigned IPs (**T-008**), prevents duplicate in same VRF (**T-006**), permits identical IP across different VRFs (**T-007**), rolls back on failure (**T-011**), creates assignment and records `ip.assigned` audit event.
+  - `ReserveIpAction`: Atomically marks status `reserved`, creates `ip_reservations` record, and logs `ip.reserved` audit event.
+  - `ReleaseIpAction`: Closes active assignment, clears current assignment pointer, enforces post-release quarantine hold period (**T-012**), and records `ip.released` audit event.
+  - `TransferIpAction`: Atomic single-transaction transfer between interfaces without releasing to candidate pool (**T-013**), closes previous assignment, opens new assignment, and records `ip.transferred` audit event.
+- [x] Policies:
+  - `IpAddressPolicy` & `IpPoolPolicy`: RBAC controls restricting allocations, releases, and transfers to authorized network administrators.
+- [x] Livewire 4 UI Management (`App\Livewire\IPAddresses\Index`):
+  - VRF selector and Subnet selector context breadcrumbs.
+  - Subnet capacity metrics strip (Allocated, Reserved, Quarantined, Available, Free, Dynamic DHCP).
+  - Virtual candidate window table showing host address, FQDN, classification, separate **Authoritative Allocation** and **Observed Connectivity** badges, device/interface binding, and action buttons.
+  - Modal workflows: Allocate IP (with "Suggest Next Free IP" quick-fill), Release IP (with optional quarantine hold duration), Transfer IP (device/interface selection), and Reserve IP.
+  - Detail slide-over drawer displaying allocation timeline and historical assignments.
+- [x] Database Seeder (`Stage4Seeder.php`):
+  - Seeds Radiology CT & ICU pools, gateway exclusions, active allocations for CT Scanner (`KY-RAD-CT01:eth0`, `eth1`) and ICU Monitor (`KY-ICU-MON01:eth0`).
+- [x] Automated Tests:
+  - 113 total passing tests (16 newly added for Stage 4) with 393 assertions.
+  - Feature tests: `IpAllocationTest`, `IpCandidateWindowTest`, `LivewireIpExplorerTest`.
+  - Integration harness: `MySqlConcurrencyTest` verifying row locking and race resistance.
 
 ---
 

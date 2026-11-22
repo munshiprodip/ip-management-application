@@ -32,3 +32,4 @@ class InterfaceLink extends Model
         return $this->belongsTo(DeviceInterface::class, 'to_interface_id');
     }
 }
+

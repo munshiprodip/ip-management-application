@@ -229,3 +229,4 @@ class DeviceManagementTest extends TestCase
         $this->assertFalse($this->viewer->can('delete', $device));
     }
 }
+

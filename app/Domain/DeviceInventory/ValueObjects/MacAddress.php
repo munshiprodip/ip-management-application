@@ -96,3 +96,4 @@ final class MacAddress
         return $this->normalized;
     }
 }
+

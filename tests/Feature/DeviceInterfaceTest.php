@@ -221,3 +221,4 @@ class DeviceInterfaceTest extends TestCase
         ]);
     }
 }
+

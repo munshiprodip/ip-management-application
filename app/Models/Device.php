@@ -120,3 +120,4 @@ class Device extends Model
         ]);
     }
 }
+

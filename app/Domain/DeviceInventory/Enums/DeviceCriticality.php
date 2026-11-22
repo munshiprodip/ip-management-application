@@ -39,3 +39,4 @@ enum DeviceCriticality: string
         return $this === self::LIFE_SAFETY;
     }
 }
+

@@ -90,3 +90,4 @@ class DeviceInterface extends Model
         return $this->speed_mbps . ' Mbps';
     }
 }
+

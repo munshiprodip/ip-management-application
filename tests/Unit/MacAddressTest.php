@@ -95,3 +95,4 @@ class MacAddressTest extends TestCase
         $this->assertEquals('00:14:22:01:23:45', MacAddress::normalize('00-14-22-01-23-45'));
     }
 }
+

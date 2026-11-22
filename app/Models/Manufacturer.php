@@ -31,3 +31,4 @@ class Manufacturer extends Model
         return $this->hasMany(Device::class);
     }
 }
+

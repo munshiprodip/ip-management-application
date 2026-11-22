@@ -91,6 +91,53 @@ class Subnet extends Model
             ->withTimestamps();
     }
 
+    public function pools(): HasMany
+    {
+        return $this->hasMany(IpPool::class);
+    }
+
+    public function exclusions(): HasMany
+    {
+        return $this->hasMany(IpExclusion::class);
+    }
+
+    public function ipAddresses(): HasMany
+    {
+        return $this->hasMany(IpAddress::class);
+    }
+
+    /**
+     * T-024: Calculate allocated address count without double counting children.
+     * Leaf subnets count their own materialized active IPs.
+     * Parent container utilization counts child prefix space without double-counting nested descendants.
+     */
+    public function allocatedCount(bool $recursive = false): int
+    {
+        if ($this->isLeaf()) {
+            return $this->ipAddresses()
+                ->whereIn('allocation_status', [
+                    \App\Domain\AddressSpace\Enums\IpAllocationStatus::ASSIGNED,
+                    \App\Domain\AddressSpace\Enums\IpAllocationStatus::RESERVED,
+                    \App\Domain\AddressSpace\Enums\IpAllocationStatus::QUARANTINED,
+                ])
+                ->count();
+        }
+
+        if (! $recursive) {
+            $totalChildCapacity = 0;
+            foreach ($this->children as $child) {
+                $totalChildCapacity += (int) (string) $child->totalAddresses();
+            }
+            return $totalChildCapacity;
+        }
+
+        $sum = 0;
+        foreach ($this->children as $child) {
+            $sum += $child->allocatedCount(true);
+        }
+        return $sum;
+    }
+
     public function toIpPrefix(): IpPrefix
     {
         return IpPrefix::parse($this->cidr);

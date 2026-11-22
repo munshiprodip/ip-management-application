@@ -128,3 +128,4 @@ class LivewireDevicesTest extends TestCase
         $this->assertEquals(2, $this->device->fresh()->interfaces()->count());
     }
 }
+

@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Stage 1 Complete  
+> **Status:** Stage 4 Complete (MVP Delivered)  
 > **Updated:** 2026-11-22  
 
 This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENTERPRISE_DEVELOPMENT_PLAN.md` to database tables, domain services, Livewire UI components, and automated test coverage.
@@ -17,10 +17,10 @@ This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENT
 | **M02** | **VRF Routing Contexts** | P0 | `vrfs` | `/vrfs`, `Vrfs\Index` | `CreateVrfAction`, `UpdateVrfAction`, `DeleteVrfAction` | `VrfManagementTest` | **Stage 1** |
 | **M03** | **L2 Domains & VLANs** | P0 | `l2_domains`, `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction`, `CreateL2DomainAction` | `VlanManagementTest` (T-016, T-017) | **Stage 1** |
 | **M04** | **Subnets & CIDR Hierarchy** | P0 | `subnets`, `subnet_vlans` | `/subnets`, `Subnets\Index` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `IpCalculatorService` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` (T-001–T-005, T-014, T-015) | **Stage 2** |
-| **M05** | **Address Pools & Exclusions** | P0 | `ip_pools`, `ip_exclusions` | `/pools`, `Pools\Index` | `PoolValidationService` | *Planned: Stage 4* | Stage 4 |
+| **M05** | **Address Pools & Exclusions** | P0 | `ip_pools`, `ip_exclusions` | `/ip-addresses`, `IPAddresses\Index` | `PoolValidationService` | `IpAllocationTest` (T-009) | **Stage 4** |
 | **M06** | **Device & Interface Inventory** | P0 | `devices`, `device_interfaces`, `device_types`, `manufacturers`, `device_models`, `interface_links` | `/devices`, `Devices\Index` | `CreateDeviceAction`, `UpdateDeviceAction`, `DeleteDeviceAction`, `CreateInterfaceAction`, `MacAddress` | `MacAddressTest`, `DeviceManagementTest`, `DeviceInterfaceTest`, `LivewireDevicesTest` | **Stage 3** |
-| **M07** | **IP Address Explorer & Records** | P0 | `ip_addresses` | `/ip-addresses`, `IPAddresses\Index` | `IpExplorerService`, `CandidateWindowGenerator` | *Planned: Stage 4* | Stage 4 |
-| **M08** | **Smart Allocation & Quarantine** | P0 | `ip_assignments`, `ip_addresses` | `/ip-allocations` | `AllocateIpAction`, `ReleaseIpAction`, `TransferIpAction` | *Planned: Stage 4 (T-006–T-013, MySQL Concurrency)* | Stage 4 |
+| **M07** | **IP Address Explorer & Records** | P0 | `ip_addresses` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator` | `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **Stage 4** |
+| **M08** | **Smart Allocation & Quarantine** | P0 | `ip_assignments`, `ip_addresses`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `AllocateIpAction`, `ReleaseIpAction`, `TransferIpAction`, `ReserveIpAction` | `IpAllocationTest` (T-006–T-013, T-024), `MySqlConcurrencyTest` | **Stage 4** |
 | **M09** | **Approval & Change Workflow** | P1 | `ip_requests`, `request_approvals` | `/requests`, `Requests\Index` | `SubmitRequestAction`, `ApprovalWorkflowService` | *Planned: Stage 5* | Stage 5 |
 | **M10** | **Safe Discovery & Observations** | P1 | `discovery_agents`, `discovery_jobs`, `ip_observations` | `/discovery`, `Discovery\Index` | `DiscoveryCollectorInterface`, `FixtureDiscoveryAdapter` | *Planned: Stage 6 (T-018–T-020)* | Stage 6 |
 | **M11** | **Reconciliation & Conflicts** | P1 | `reconciliation_findings` | `/reconciliation` | `ReconciliationEngineService` | *Planned: Stage 6* | Stage 6 |

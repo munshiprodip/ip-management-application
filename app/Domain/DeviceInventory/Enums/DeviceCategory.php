@@ -48,3 +48,4 @@ enum DeviceCategory: string
         return $this === self::MEDICAL;
     }
 }
+

@@ -46,3 +46,4 @@ class DeviceInterfacePolicy
         ], true);
     }
 }
+

@@ -42,3 +42,4 @@ enum InterfaceType: string
         return in_array($this, [self::PHYSICAL, self::VIRTUAL, self::MANAGEMENT, self::AGGREGATED], true);
     }
 }
+
