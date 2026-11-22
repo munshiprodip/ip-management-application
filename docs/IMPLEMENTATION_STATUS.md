@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 1.6.0  
+> **Current Version:** 1.7.0  
 > **Last Updated:** 2026-11-22  
-> **Current Stage:** Stage 6 — Safe Discovery & Reconciliation (COMPLETED)  
-> **Next Stage:** Stage 7 — Alerts, Reporting and Network Views (QUEUED)  
+> **Current Stage:** Stage 7 — Alerts, Reporting and Network Views (COMPLETED)  
+> **Next Stage:** Stage 8 — API, Integrations and Production Hardening (QUEUED)  
 
 ---
 
@@ -19,7 +19,7 @@
 | **4** | **Pools, IP Explorer & Allocation (MVP)** | **COMPLETED** | **113/113 Tests Passed** | Virtual candidate window, atomic transactions, gates T-006–T-013 & T-024, post-release quarantine, MySQL concurrency harness |
 | **5** | **Requests & Approvals** | **COMPLETED** | **124/124 Tests Passed** | Formal segregation of duties (T-022), scoped operator policy (T-021), SLA engine, idempotent provisioning, replay protection |
 | **6** | **Safe Discovery & Reconciliation** | **COMPLETED** | **133/133 Tests Passed** | Evidence separation (T-018), unauthorized scan target & clinical restriction (T-019), silent device protection (T-020), stale agent detection (T-028) |
-| 7 | Alerts & Network Views | QUEUED | Prerequisite: Stages 5 & 6 | Deduplication, capacity dashboards |
+| **7** | **Alerts, Reporting & Network Views** | **COMPLETED** | **148/148 Tests Passed** | Alert deduplication engine, occurrence tracking, capacity exhaustion warnings, Gate T-027 bounded 24h exports, Gate UAT-09 departmental export scoping |
 | 8 | API & Production Hardening | QUEUED | Prerequisite: Stage 7 | OpenAPI, token scopes, security hardening |
 | 9 | Controlled Handover | QUEUED | Prerequisite: Stage 8 | Pilot onboarding and runbooks |
 
@@ -280,6 +280,48 @@ Results: 35 Tests Passed, 143 Assertions, 0 Failures, 0 Skipped (1.6s duration)
 | `UserRoleTest` | 3 tests passed | PASS |
 | `ExampleTest` | 2 tests passed | PASS |
 | `Unit\ExampleTest` | 1 test passed | PASS |
+
+---
+
+## Stage 7 Execution Record (Alerts, Reporting & Network Views)
+
+### Completed Deliverables
+- [x] Domain Enums (`App\Domain\Alerts\Enums`):
+  - `AlertSeverity`: `info`, `warning`, `critical` (with tailwind badge classes and labels).
+  - `AlertStatus`: `open`, `acknowledged`, `resolved`, `suppressed`.
+  - `AlertRuleCode`: `rogue_ip`, `ip_conflict`, `mac_drift`, `subnet_exhaustion`, `agent_offline`.
+  - `ExportType`: `subnets`, `ip_addresses`, `devices`, `audit_events`.
+  - `ExportStatus`: `queued`, `completed`, `failed`.
+- [x] Database Migration (`2026_11_22_000701_create_alerts_and_exports_tables.php`):
+  - `alerts`: Operational alerts with indexed `dedupe_key`, occurrence counter, lifecycle timestamps, and assignee tracking.
+  - `notification_deliveries`: Multi-channel notification delivery records with read receipt tracking.
+  - `export_jobs`: Bounded scoped data exports with 24-hour expiration timestamps (`expires_at`), private file storage paths, and row metrics.
+- [x] Eloquent Models & Policies:
+  - `App\Models\Alert`, `App\Models\NotificationDelivery`, `App\Models\ExportJob`.
+  - `App\Policies\AlertPolicy`, `App\Policies\ExportJobPolicy`.
+- [x] Operational Services:
+  - `App\Services\Alerting\AlertDispatcherService`:
+    - Strict deduplication engine: checks open alerts by `dedupe_key`; increments `occurrence_count` and refreshes `last_occurred_at` without spamming notifications.
+    - Subnet capacity exhaustion rule: triggers `WARNING` at >= 80% utilization, escalates to `CRITICAL` at >= 95%.
+    - Reconciliation findings integration: converts rogue devices and drift events into operational triage alerts.
+    - Stale collector detection (**T-028**): triggers `AGENT_OFFLINE` alert without mutating authoritative allocation.
+  - `App\Services\Reporting\ReportExportService`:
+    - Enforces **Gate T-027**: Bounded CSV exports (up to 5,000 records), private storage path, automatic 24-hour file expiration.
+    - Enforces **Gate T-021** / **UAT-09**: Department operators strictly restricted to exporting their assigned departmental scope; prohibited from exporting global audit logs or other departments.
+    - Expiration verification on download: expired files throw 410 Gone / runtime exception.
+    - Automated purge cleanup: deletes physical private files and cleans expired job records.
+- [x] Livewire 4 UI Management:
+  - `App\Livewire\Alerts\Index` — KPI cards (Open, Critical, Exhaustion, Acknowledged), search/severity/status toolbar, slide-over drawer with occurrence history and audited resolution/suppression actions.
+  - `App\Livewire\Reports\Index` — Live searchable audit log explorer, scoped export generation modal with department locks, and recent export jobs table with download triggers.
+  - `App\Livewire\Dashboard\Index` — Stage 7 active posture banner, subnet capacity & exhaustion watchlist (top utilized segments with color-coded progress bars), active alerts widget, and real database KPIs.
+- [x] Seeders & Routes:
+  - `Stage7Seeder.php` seeding sample alerts (subnet exhaustion, rogue IP, agent offline) and completed export job.
+  - Download route `/reports/exports/{job}/download` with strict authorization, expiration checks, and streaming headers.
+- [x] Full Automated Test Suites:
+  - `tests/Feature/AlertDeduplicationTest.php` (deduplication, occurrence increment, exhaustion thresholds, lifecycle transitions).
+  - `tests/Feature/ReportExportTest.php` (**T-027** 24h expiration, private storage, bounded limit, **T-021** / **UAT-09** department scope isolation, purge cleanup).
+  - `tests/Feature/LivewireAlertsAndReportsTest.php` (alerts index, drawer acknowledge/resolve, reports export generation, dashboard views).
+  - Total test suite expanded to **148 passing tests**, **525 assertions**, **0 failures**.
 
 ---
 

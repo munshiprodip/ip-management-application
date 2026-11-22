@@ -4,8 +4,17 @@ declare(strict_types=1);
 
 namespace App\Livewire\Dashboard;
 
+use App\Domain\Alerts\Enums\AlertSeverity;
+use App\Domain\Alerts\Enums\AlertStatus;
+use App\Models\Alert;
 use App\Models\AuditEvent;
+use App\Models\Device;
+use App\Models\IpAddress;
+use App\Models\IpRequest;
+use App\Models\Subnet;
 use App\Models\User;
+use App\Models\Vrf;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -15,38 +24,62 @@ use Livewire\Component;
 #[Title('Operations Dashboard - KYAMCH IPAM')]
 class Index extends Component
 {
-    public function render()
+    public function render(): View
     {
-        // Compute genuine database statistics (no mock pre-filled KPI values)
         $userCount = User::count();
         $auditCount = AuditEvent::count();
+        $vrfCount = Vrf::count();
+        $subnetCount = Subnet::count();
+        $deviceCount = Device::count();
 
-        // Check if database tables from later stages exist yet or are pending migration
-        $hasVrfsTable = DB::getSchemaBuilder()->hasTable('vrfs');
-        $vrfCount = $hasVrfsTable ? DB::table('vrfs')->count() : 0;
+        $totalIpCount = IpAddress::count();
+        $assignedIpCount = IpAddress::where('allocation_status', 'assigned')->count();
+        $reservedIpCount = IpAddress::where('allocation_status', 'reserved')->count();
+        $quarantinedIpCount = IpAddress::where('allocation_status', 'quarantined')->count();
 
-        $hasSubnetsTable = DB::getSchemaBuilder()->hasTable('subnets');
-        $subnetCount = $hasSubnetsTable ? DB::table('subnets')->count() : 0;
+        $openAlertCount = Alert::open()->count();
+        $criticalAlertCount = Alert::open()->critical()->count();
+        $pendingRequestCount = DB::table('ip_requests')->where('status', 'pending_approval')->count();
 
-        $hasIpAddressesTable = DB::getSchemaBuilder()->hasTable('ip_addresses');
-        $ipCount = $hasIpAddressesTable ? DB::table('ip_addresses')->count() : 0;
+        // Subnet Capacity Watchlist (Subnets sorted by utilization)
+        $subnets = Subnet::with(['vrf', 'site'])->take(50)->get();
+        $capacityWatchlist = $subnets->map(function ($subnet) {
+            $total = (int) (string) $subnet->totalAddresses();
+            $allocated = $subnet->allocatedCount();
+            $utilization = $total > 0 ? round(($allocated / $total) * 100, 1) : 0.0;
 
-        $hasDevicesTable = DB::getSchemaBuilder()->hasTable('devices');
-        $deviceCount = $hasDevicesTable ? DB::table('devices')->count() : 0;
+            return [
+                'subnet' => $subnet,
+                'total' => $total,
+                'allocated' => $allocated,
+                'utilization' => $utilization,
+            ];
+        })->sortByDesc('utilization')->take(5);
 
-        $recentAudits = AuditEvent::recent(8)->get();
+        // Active Alerts
+        $activeAlerts = Alert::with(['assignee', 'finding'])
+            ->open()
+            ->orderByDesc('last_occurred_at')
+            ->take(5)
+            ->get();
+
+        $recentAudits = AuditEvent::recent(6)->get();
 
         return view('livewire.dashboard.index', [
             'userCount' => $userCount,
             'auditCount' => $auditCount,
             'vrfCount' => $vrfCount,
             'subnetCount' => $subnetCount,
-            'ipCount' => $ipCount,
             'deviceCount' => $deviceCount,
-            'hasVrfsTable' => $hasVrfsTable,
-            'hasSubnetsTable' => $hasSubnetsTable,
-            'hasIpAddressesTable' => $hasIpAddressesTable,
-            'hasDevicesTable' => $hasDevicesTable,
+            'totalIpCount' => $totalIpCount,
+            'assignedIpCount' => $assignedIpCount,
+            'reservedIpCount' => $reservedIpCount,
+            'quarantinedIpCount' => $quarantinedIpCount,
+            'openAlertCount' => $openAlertCount,
+            'criticalAlertCount' => $criticalAlertCount,
+            'pendingRequestCount' => $pendingRequestCount,
+            'capacityWatchlist' => $capacityWatchlist,
+            'activeAlerts' => $activeAlerts,
             'recentAudits' => $recentAudits,
             'discoveryEnabled' => config('ipam.discovery_enabled'),
             'writesEnabled' => config('ipam.external_writes_enabled'),
@@ -56,4 +89,3 @@ class Index extends Component
         ]);
     }
 }
-

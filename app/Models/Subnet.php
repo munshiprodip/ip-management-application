@@ -168,6 +168,11 @@ class Subnet extends Model
         return $this->toIpPrefix()->totalAddresses();
     }
 
+    public function getTotalAddressesAttribute(): int
+    {
+        return (int) (string) $this->totalAddresses();
+    }
+
     public function usableAddresses(): BigInteger
     {
         return $this->toIpPrefix()->usableAddresses();

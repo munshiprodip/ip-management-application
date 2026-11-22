@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Stage 6 Complete (Discovery & Reconciliation Delivered)  
+> **Status:** Stage 7 Complete (Alerts, Reporting & Network Views Delivered)  
 > **Updated:** 2026-11-22  
 
 This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENTERPRISE_DEVELOPMENT_PLAN.md` to database tables, domain services, Livewire UI components, and automated test coverage.
@@ -24,7 +24,7 @@ This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENT
 | **M09** | **Approval & Change Workflow** | P1 | `ip_requests`, `request_approvals`, `change_records` | `/requests`, `Requests\Index` | `SubmitRequestAction`, `ApproveRequestAction`, `RejectRequestAction`, `ProvisionRequestAction`, `ApprovalWorkflowService` | `RequestWorkflowTest` (T-021, T-022), `LivewireRequestsTest` | **Stage 5** |
 | **M10** | **Safe Discovery & Observations** | P1 | `discovery_agents`, `discovery_jobs`, `ip_observations` | `/discovery`, `Discovery\Index` | `DiscoveryExecutionService`, `DiscoveryCollectorInterface`, `FixtureDiscoveryAdapter` | `DiscoverySafetyTest` (T-018, T-019, T-020, T-028) | **Stage 6** |
 | **M11** | **Reconciliation & Conflicts** | P1 | `reconciliation_findings` | `/discovery`, `Discovery\Index` | `ReconciliationEngineService` | `ReconciliationEngineTest`, `LivewireDiscoveryTest` | **Stage 6** |
-| **M12** | **Alerting & Notifications** | P1 | `alerts`, `notification_deliveries` | `/alerts`, `Alerts\Index` | `AlertDispatcherService`, `DeduplicationService` | *Planned: Stage 7* | Stage 7 |
-| **M13** | **Dashboard & Reports** | P1 | Pre-aggregated metrics | `/dashboard`, `/reports` | `ReportingService`, `CsvExportJob` | *Planned: Stage 7* | Stage 7 |
+| **M12** | **Alerting & Notifications** | P1 | `alerts`, `notification_deliveries` | `/alerts`, `Alerts\Index` | `AlertDispatcherService` | `AlertDeduplicationTest`, `LivewireAlertsAndReportsTest` | **Stage 7** |
+| **M13** | **Dashboard & Reports** | P1 | `export_jobs`, `audit_events` | `/dashboard`, `/reports`, `Dashboard\Index`, `Reports\Index` | `ReportExportService` | `ReportExportTest` (T-027, UAT-09), `LivewireAlertsAndReportsTest` | **Stage 7** |
 | **M14** | **API & Integrations** | P1/P2 | `api_tokens`, `integrations` | `/api/v1/*` | `ApiV1Controllers`, `DhcpSyncAdapter` | *Planned: Stage 8* | Stage 8 |
 | **M15** | **Security & System Admin** | P0/P1 | `settings`, `audit_events`, `users` | `/admin`, `Admin\Index` | `AuditLogger`, `FeatureFlagService` | `AuditLogTest`, `UserRoleTest` | Stage 0 / Stage 1 |

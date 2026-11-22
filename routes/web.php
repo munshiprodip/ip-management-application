@@ -51,5 +51,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/discovery', DiscoveryIndex::class)->name('discovery.index');
     Route::get('/alerts', AlertsIndex::class)->name('alerts.index');
     Route::get('/reports', ReportsIndex::class)->name('reports.index');
+    Route::get('/reports/exports/{job}/download', function (App\Models\ExportJob $job, App\Services\Reporting\ReportExportService $service) {
+        try {
+            $content = $service->getExportFileContent($job, auth()->user());
+            return response($content, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $job->file_name . '"',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            abort(403, $e->getMessage());
+        } catch (\RuntimeException $e) {
+            abort(410, $e->getMessage());
+        }
+    })->name('reports.exports.download');
     Route::get('/admin', AdminIndex::class)->name('admin.index');
 });
