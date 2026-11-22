@@ -196,4 +196,64 @@ class SubnetManagementTest extends TestCase
         $component->call('collapseAll')
             ->assertDontSee('10.20.1.0/24');
     }
+
+    public function test_admin_can_create_and_update_subnet_with_optional_mask_and_gateway(): void
+    {
+        $createAction = app(CreateSubnetAction::class);
+        $updateAction = app(UpdateSubnetAction::class);
+
+        $subnet = $createAction->execute([
+            'name' => 'Cardiology Subnet',
+            'cidr' => '10.30.1.0/24',
+            'subnet_mask' => '255.255.255.0',
+            'gateway' => '10.30.1.254', // Custom gateway IP
+        ]);
+
+        $this->assertEquals('255.255.255.0', $subnet->netmask());
+        $this->assertEquals('10.30.1.254', $subnet->defaultGateway());
+        $this->assertDatabaseHas('subnets', [
+            'id' => $subnet->id,
+            'subnet_mask' => '255.255.255.0',
+            'gateway' => '10.30.1.254',
+        ]);
+
+        $updated = $updateAction->execute($subnet, [
+            'gateway' => '10.30.1.1',
+        ]);
+
+        $this->assertEquals('10.30.1.1', $updated->defaultGateway());
+        $this->assertDatabaseHas('subnets', [
+            'id' => $subnet->id,
+            'gateway' => '10.30.1.1',
+        ]);
+    }
+
+    public function test_livewire_can_create_subnet_with_optional_mask_and_gateway(): void
+    {
+        $this->actingAs($this->admin);
+
+        Livewire::test(SubnetsIndex::class)
+            ->set('subnet_name', 'Emergency OT Subnet')
+            ->set('subnet_cidr', '10.40.10.0/24')
+            ->set('subnet_mask', '255.255.255.0')
+            ->set('subnet_gateway', '10.40.10.1')
+            ->set('subnet_type', 'assignable')
+            ->set('subnet_status', 'active')
+            ->call('saveSubnet')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('subnets', [
+            'name' => 'Emergency OT Subnet',
+            'cidr' => '10.40.10.0/24',
+            'subnet_mask' => '255.255.255.0',
+            'gateway' => '10.40.10.1',
+        ]);
+
+        $response = $this->get(route('subnets.index'));
+        $response->assertStatus(200);
+        $response->assertSee('Mask:');
+        $response->assertSee('GW:');
+        $response->assertSee('255.255.255.0');
+        $response->assertSee('10.40.10.1');
+    }
 }

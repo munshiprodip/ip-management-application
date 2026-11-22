@@ -28,6 +28,8 @@ class Subnet extends Model
         'name',
         'description',
         'cidr',
+        'gateway',
+        'subnet_mask',
         'ip_version',
         'network_hex',
         'start_hex',
@@ -182,6 +184,10 @@ class Subnet extends Model
 
     public function netmask(): string
     {
+        if (!empty($this->subnet_mask)) {
+            return $this->subnet_mask;
+        }
+
         $prefix = $this->toIpPrefix();
         if ($prefix->version() === 4) {
             $maskBits = $prefix->prefixLength();
@@ -193,6 +199,27 @@ class Subnet extends Model
     }
 
     public function defaultGateway(): string
+    {
+        if (!empty($this->gateway)) {
+            return $this->gateway;
+        }
+
+        return $this->toIpPrefix()->firstUsableAddress()->toNormalizedString();
+    }
+
+    public function calculatedNetmask(): string
+    {
+        $prefix = $this->toIpPrefix();
+        if ($prefix->version() === 4) {
+            $maskBits = $prefix->prefixLength();
+            $maskInt = ($maskBits === 0) ? 0 : (~0 << (32 - $maskBits)) & 0xFFFFFFFF;
+            return long2ip($maskInt);
+        }
+
+        return '/' . $prefix->prefixLength();
+    }
+
+    public function calculatedGateway(): string
     {
         return $this->toIpPrefix()->firstUsableAddress()->toNormalizedString();
     }

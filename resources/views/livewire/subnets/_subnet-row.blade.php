@@ -47,6 +47,11 @@
             @endif
             <span class="text-[10px] text-slate-400 uppercase font-mono">IPv{{ $subnet->ip_version }}</span>
         </div>
+        <div class="mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1.5 flex-wrap">
+            <span title="Subnet Mask">Mask: <span class="text-slate-700 dark:text-slate-300 font-medium">{{ $subnet->netmask() }}</span></span>
+            <span class="text-slate-300 dark:text-slate-600">·</span>
+            <span title="Default Gateway">GW: <span class="text-blue-600 dark:text-blue-400 font-medium">{{ $subnet->defaultGateway() }}</span></span>
+        </div>
     </td>
     <td class="py-3 px-4">
         <div class="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">

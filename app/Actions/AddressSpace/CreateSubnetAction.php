@@ -19,7 +19,7 @@ class CreateSubnetAction
     ) {}
 
     /**
-     * @param array{cidr: string, name: string, parent_id?: ?int, vlan_id?: ?int, subnet_type?: string|SubnetType, status?: string|SubnetStatus, description?: ?string, allocation_enabled?: bool} $data
+     * @param array{cidr: string, name: string, parent_id?: ?int, vlan_id?: ?int, subnet_type?: string|SubnetType, status?: string|SubnetStatus, description?: ?string, allocation_enabled?: bool, gateway?: ?string, subnet_mask?: ?string} $data
      */
     public function execute(array $data): Subnet
     {
@@ -45,6 +45,8 @@ class CreateSubnetAction
                 'name' => trim($data['name']),
                 'description' => $data['description'] ?? null,
                 'cidr' => $canonicalCidr,
+                'gateway' => !empty($data['gateway']) ? trim($data['gateway']) : null,
+                'subnet_mask' => !empty($data['subnet_mask']) ? trim($data['subnet_mask']) : null,
                 'ip_version' => $prefix->version(),
                 'network_hex' => $prefix->networkHex(),
                 'start_hex' => $prefix->startHex(),

@@ -18,7 +18,7 @@ class UpdateSubnetAction
     ) {}
 
     /**
-     * @param array{name?: string, description?: ?string, parent_id?: ?int, vlan_id?: ?int, subnet_type?: string|SubnetType, status?: string|SubnetStatus, allocation_enabled?: bool} $data
+     * @param array{name?: string, description?: ?string, parent_id?: ?int, vlan_id?: ?int, subnet_type?: string|SubnetType, status?: string|SubnetStatus, allocation_enabled?: bool, gateway?: ?string, subnet_mask?: ?string} $data
      */
     public function execute(Subnet $subnet, array $data): Subnet
     {
@@ -38,6 +38,14 @@ class UpdateSubnetAction
                 'parent_id' => $parentId,
                 'vlan_id' => array_key_exists('vlan_id', $data) && !empty($data['vlan_id']) ? (int) $data['vlan_id'] : null,
             ]);
+
+            if (array_key_exists('gateway', $data)) {
+                $updatePayload['gateway'] = !empty($data['gateway']) ? trim($data['gateway']) : null;
+            }
+
+            if (array_key_exists('subnet_mask', $data)) {
+                $updatePayload['subnet_mask'] = !empty($data['subnet_mask']) ? trim($data['subnet_mask']) : null;
+            }
 
             if (array_key_exists('site_id', $data)) {
                 $updatePayload['site_id'] = !empty($data['site_id']) ? (int) $data['site_id'] : null;

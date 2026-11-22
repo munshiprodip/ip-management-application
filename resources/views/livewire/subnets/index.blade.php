@@ -298,6 +298,36 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="font-medium text-slate-700 dark:text-slate-300">Subnet Mask</label>
+                                <span class="text-[10px] text-slate-400 font-mono">Optional</span>
+                            </div>
+                            <input
+                                wire:model="subnet_mask"
+                                type="text"
+                                placeholder="e.g. 255.255.255.0"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-emerald-500"
+                            />
+                            @error('subnet_mask') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="font-medium text-slate-700 dark:text-slate-300">Default Gateway</label>
+                                <span class="text-[10px] text-slate-400 font-mono">Optional</span>
+                            </div>
+                            <input
+                                wire:model="subnet_gateway"
+                                type="text"
+                                placeholder="e.g. 10.20.0.1 or 10.20.0.254"
+                                class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono focus:ring-2 focus:ring-emerald-500"
+                            />
+                            @error('subnet_gateway') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Campus / Facility Site</label>
                             <x-searchable-select 
                                 placeholder="Global / Unassigned"

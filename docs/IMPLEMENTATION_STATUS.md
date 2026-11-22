@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 2.5.0 (Streamlined Core Architecture with Universal Searchable Selects, Dashboard Host Type Breakdown & Clean Production UI)  
+> **Current Version:** 2.6.0 (Streamlined Core Architecture with Subnet Mask & Default Gateway Configurations on Subnets)  
 > **Last Updated:** 2026-11-22  
 > **Architecture Scope:** Focused Core IPAM with Top-Level Site / Campus Segregation (Sites/Campuses, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Address Explorer & Allocations, Host Types Management)  
-> **Status:** All 98 Automated Tests Passing (100% Pass Rate)
+> **Status:** All 100 Automated Tests Passing (100% Pass Rate)
 
 ---
 
@@ -24,6 +24,12 @@ Per architectural requirements, the application delivers focused, enterprise-gra
    - Strict CIDR canonicalization and parent-child containment validation.
    - Global sibling non-overlap validation per address family.
    - Dynamic CIDR calculator and visual subnet split preview tool.
+   - **Subnet Mask & Default Gateway (Optional)**:
+     - Added `gateway` and `subnet_mask` columns to `subnets` table with database persistence.
+     - Subnet modal inputs for optional custom Subnet Mask (`e.g. 255.255.255.0`) and Default Gateway (`e.g. 10.20.0.1` or `10.20.0.254`).
+     - Real-time auto-calculation upon entering/typing CIDR prefix or generating child subnets.
+     - Fallback to calculated values when left blank, maintaining 100% mathematical integrity.
+     - Direct display of Subnet Mask and Gateway on each row in the Subnet Hierarchy Tree and Flat Table (`Mask: ... · GW: ...`).
    - Interactive inline expand/collapse toggles on parent subnets to view and manage child subnets directly within the hierarchy tree.
    - One-click `Expand All` and `Collapse All` tree controls.
    - Subnet-to-Campus association with automatic parent-to-child site inheritance.
@@ -82,15 +88,15 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 
 | Component | Status | Verification Detail |
 |---|---|---|
-| **Automated Unit & Feature Tests** | **PASSED (98/98)** | PHPUnit suite with 350 assertions across models, actions, services, and Livewire components |
-| **Database Schema** | **MIGRATED & SEEDED** | Core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses`, `host_type` additions, `host_types` table |
-| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 181ms |
+| **Automated Unit & Feature Tests** | **PASSED (100/100)** | PHPUnit suite with 362 assertions across models, actions, services, and Livewire components |
+| **Database Schema** | **MIGRATED & SEEDED** | 7 core migrations: `sites`, `vlans`, `subnets`, `ip_pools_and_addresses`, `host_type` additions, `host_types` table, `gateway_and_subnet_mask_to_subnets` |
+| **Vite & Tailwind CSS Build** | **PASSED** | Compiled cleanly via `npm run build` in 222ms |
 | **Dev Server (Port 8080)** | **RUNNING** | Active and responsive on `http://127.0.0.1:8080` (Daemon task) |
 | **Authentication & RBAC** | **VERIFIED** | SuperAdmin, NetworkAdmin, Operator, ReadOnly with full audit event logging |
 
 ---
 
-## Active Test Inventory (98 Tests)
+## Active Test Inventory (100 Tests)
 
 1. `AuthenticationTest`: 3 tests (login screen, user login, logout).
 2. `EnterpriseShellTest`: 4 tests (layout render, navigation links including campuses & host types, guest redirect, searchable select component rendering with autofocus).
@@ -101,7 +107,7 @@ Per architectural requirements, the application delivers focused, enterprise-gra
 7. `IpAddressTest`: 12 tests (IPv4/IPv6 parsing, hex conversion, normalization).
 8. `IpPrefixTest`: 10 tests (CIDR parsing, network/broadcast calculation, host count).
 9. `SubnetHierarchyTest`: 9 tests (containment, non-overlap, cycle detection, split preview).
-10. `SubnetManagementTest`: 7 tests (create, update, delete, tree retrieval, inline expand/collapse toggle).
+10. `SubnetManagementTest`: 9 tests (create, update, delete, tree retrieval, inline expand/collapse toggle, optional mask & gateway action creation/update, Livewire modal creation and table rendering).
 11. `VlanManagementTest`: 5 tests (802.1Q tags, validation, subnet association).
 12. `IpAllocationTest`: 10 tests (allocate, release, reserve, quarantine, pool exclusion, idempotency, audit trail, unquarantine to unassigned, allocation with host type).
 13. `IpCandidateWindowTest`: 4 tests (virtual candidate pagination, status flags).

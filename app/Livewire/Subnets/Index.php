@@ -50,6 +50,8 @@ class Index extends Component
     public ?int $subnet_vlan_id = null;
     public string $subnet_name = '';
     public string $subnet_cidr = '';
+    public string $subnet_mask = '';
+    public string $subnet_gateway = '';
     public string $subnet_type = 'assignable';
     public string $subnet_status = 'active';
     public string $subnet_description = '';
@@ -125,7 +127,7 @@ class Index extends Component
     {
         $this->isEditing = false;
         $this->selectedSubnetId = null;
-        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_description', 'subnet_vlan_id', 'subnet_site_id']);
+        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_mask', 'subnet_gateway', 'subnet_description', 'subnet_vlan_id', 'subnet_site_id']);
 
         $this->subnet_parent_id = $parentId ?? $this->selectedParentId;
         $this->subnet_type = ($parentId !== null) ? 'assignable' : 'aggregate';
@@ -142,6 +144,30 @@ class Index extends Component
         $this->showSubnetModal = true;
     }
 
+    public function updatedSubnetCidr(string $value): void
+    {
+        try {
+            $prefix = IpPrefix::parse($value);
+            if ($prefix->version() === 4) {
+                $maskBits = $prefix->prefixLength();
+                $maskInt = ($maskBits === 0) ? 0 : (~0 << (32 - $maskBits)) & 0xFFFFFFFF;
+                if (empty($this->subnet_mask)) {
+                    $this->subnet_mask = long2ip($maskInt);
+                }
+            } else {
+                if (empty($this->subnet_mask)) {
+                    $this->subnet_mask = '/' . $prefix->prefixLength();
+                }
+            }
+
+            if (empty($this->subnet_gateway)) {
+                $this->subnet_gateway = $prefix->firstUsableAddress()->toNormalizedString();
+            }
+        } catch (\Throwable) {
+            // Typing in progress or invalid CIDR
+        }
+    }
+
     public function openEditModal(int $id): void
     {
         $subnet = Subnet::findOrFail($id);
@@ -153,6 +179,8 @@ class Index extends Component
         $this->subnet_vlan_id = $subnet->vlan_id;
         $this->subnet_name = $subnet->name;
         $this->subnet_cidr = $subnet->cidr;
+        $this->subnet_mask = (string) ($subnet->subnet_mask ?? $subnet->netmask());
+        $this->subnet_gateway = (string) ($subnet->gateway ?? '');
         $this->subnet_type = $subnet->subnet_type->value;
         $this->subnet_status = $subnet->status->value;
         $this->subnet_description = (string) $subnet->description;
@@ -167,6 +195,8 @@ class Index extends Component
             'subnet_parent_id' => ['nullable', 'integer', 'exists:subnets,id'],
             'subnet_name' => ['required', 'string', 'max:128'],
             'subnet_cidr' => ['required', 'string', 'regex:/^([0-9a-fA-F:\.]+)\/([0-9]+)$/'],
+            'subnet_mask' => ['nullable', 'string', 'max:64'],
+            'subnet_gateway' => ['nullable', 'string', 'max:64'],
             'subnet_type' => ['required', 'string'],
             'subnet_status' => ['required', 'in:planned,active,deprecated,retired'],
             'subnet_vlan_id' => ['nullable', 'integer', 'exists:vlans,id'],
@@ -181,6 +211,8 @@ class Index extends Component
                     'name' => $this->subnet_name,
                     'parent_id' => $this->subnet_parent_id,
                     'vlan_id' => $this->subnet_vlan_id,
+                    'gateway' => $this->subnet_gateway,
+                    'subnet_mask' => $this->subnet_mask,
                     'subnet_type' => SubnetType::from($this->subnet_type),
                     'status' => SubnetStatus::from($this->subnet_status),
                     'description' => $this->subnet_description,
@@ -195,6 +227,8 @@ class Index extends Component
                     'vlan_id' => $this->subnet_vlan_id,
                     'name' => $this->subnet_name,
                     'cidr' => $this->subnet_cidr,
+                    'gateway' => $this->subnet_gateway,
+                    'subnet_mask' => $this->subnet_mask,
                     'subnet_type' => SubnetType::from($this->subnet_type),
                     'status' => SubnetStatus::from($this->subnet_status),
                     'description' => $this->subnet_description,
@@ -232,6 +266,14 @@ class Index extends Component
         $suggested = $service->findFreeChildPrefix($parent, $defaultChildLength);
         if ($suggested) {
             $this->subnet_cidr = $suggested->cidr();
+            if ($suggested->version() === 4) {
+                $maskBits = $suggested->prefixLength();
+                $maskInt = ($maskBits === 0) ? 0 : (~0 << (32 - $maskBits)) & 0xFFFFFFFF;
+                $this->subnet_mask = long2ip($maskInt);
+            } else {
+                $this->subnet_mask = '/' . $suggested->prefixLength();
+            }
+            $this->subnet_gateway = $suggested->firstUsableAddress()->toNormalizedString();
         } else {
             $this->addError('subnet_cidr', "No free /{$defaultChildLength} prefix blocks remaining in parent {$parent->cidr}.");
         }
