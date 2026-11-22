@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace App\Livewire\Admin;
 
 use App\Actions\Organization\ManageOrganizationAction;
+use App\Models\ApiToken;
 use App\Models\Department;
+use App\Models\Integration;
 use App\Models\Organization;
 use App\Models\Site;
 use App\Models\User;
+use App\Services\Integrations\Adapters\DhcpReadonlySyncAdapter;
+use App\Services\Integrations\Adapters\DnsReadonlySyncAdapter;
+use App\Services\Integrations\IntegrationSyncService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -18,7 +23,7 @@ use Livewire\Component;
 #[Title('System Administration & Organization - KYAMCH IPAM')]
 class Index extends Component
 {
-    public string $activeTab = 'sites'; // 'sites', 'departments', 'users', 'parameters'
+    public string $activeTab = 'sites'; // 'sites', 'departments', 'users', 'tokens', 'integrations', 'parameters'
 
     // Site modal
     public bool $showSiteModal = false;
@@ -35,9 +40,21 @@ class Index extends Component
     public string $dept_email = '';
     public string $dept_phone = '';
 
+    // Token creation state
+    public bool $showTokenModal = false;
+    public string $tokenName = '';
+    public array $tokenScopes = ['read:subnets', 'read:ips', 'write:allocations'];
+    public int $tokenExpiresInDays = 90;
+    public ?string $newlyGeneratedPlainToken = null;
+
+    public ?string $feedbackMessage = null;
+    public ?string $feedbackError = null;
+
     public function setTab(string $tab): void
     {
         $this->activeTab = $tab;
+        $this->feedbackMessage = null;
+        $this->feedbackError = null;
     }
 
     public function openCreateSiteModal(): void
@@ -103,18 +120,80 @@ class Index extends Component
         }
     }
 
+    public function openCreateTokenModal(): void
+    {
+        $this->tokenName = '';
+        $this->tokenScopes = ['read:subnets', 'read:ips', 'write:allocations'];
+        $this->tokenExpiresInDays = 90;
+        $this->newlyGeneratedPlainToken = null;
+        $this->showTokenModal = true;
+    }
+
+    public function createApiToken(): void
+    {
+        $this->validate([
+            'tokenName' => 'required|string|min:3|max:128',
+            'tokenScopes' => 'required|array|min:1',
+            'tokenExpiresInDays' => 'required|integer|min:1|max:365',
+        ]);
+
+        $result = ApiToken::createToken(
+            name: $this->tokenName,
+            scopes: $this->tokenScopes,
+            user: auth()->user(),
+            expiresInDays: $this->tokenExpiresInDays,
+            rateLimit: 60
+        );
+
+        $this->newlyGeneratedPlainToken = $result['plain_token'];
+        $this->feedbackMessage = "API Token '{$this->tokenName}' created successfully. Copy the token now; it will never be displayed again.";
+    }
+
+    public function revokeApiToken(int $id): void
+    {
+        $token = ApiToken::findOrFail($id);
+        $token->revoke();
+        $this->feedbackMessage = "API Token '{$token->name}' revoked.";
+    }
+
+    public function triggerSync(int $integrationId, IntegrationSyncService $syncService): void
+    {
+        $integration = Integration::findOrFail($integrationId);
+
+        // Register default adapters
+        $syncService->registerAdapter(new DhcpReadonlySyncAdapter());
+        $syncService->registerAdapter(new DnsReadonlySyncAdapter());
+
+        try {
+            $run = $syncService->sync($integration);
+            $this->feedbackMessage = sprintf(
+                "Read-only sync completed for [%s]: %d scanned, %d matched, %d divergent.",
+                $integration->name,
+                $run->items_scanned,
+                $run->items_matched,
+                $run->items_divergent
+            );
+        } catch (\Throwable $e) {
+            $this->feedbackError = "Sync failed: " . $e->getMessage();
+        }
+    }
+
     public function render()
     {
         $organization = Organization::first();
         $sites = Site::withCount(['l2Domains', 'locations'])->orderBy('name')->get();
         $departments = Department::with('ownerUser')->orderBy('name')->get();
         $users = User::orderBy('name')->get();
+        $tokens = ApiToken::with('user')->orderByDesc('id')->get();
+        $integrations = Integration::with('site')->orderBy('name')->get();
 
         return view('livewire.admin.index', [
             'organization' => $organization,
             'sites' => $sites,
             'departments' => $departments,
             'users' => $users,
+            'tokens' => $tokens,
+            'integrations' => $integrations,
             'discoveryEnabled' => config('ipam.discovery_enabled'),
             'writesEnabled' => config('ipam.external_writes_enabled'),
             'dbDriver' => config('database.default'),

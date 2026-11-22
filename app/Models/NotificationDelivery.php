@@ -59,3 +59,4 @@ class NotificationDelivery extends Model
         return $query->where('recipient_id', $user->id);
     }
 }
+

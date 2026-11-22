@@ -35,3 +35,4 @@ class AlertPolicy
         return in_array($user->role, [UserRole::SUPER_ADMIN, UserRole::NETWORK_ADMIN], true);
     }
 }
+

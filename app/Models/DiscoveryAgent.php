@@ -70,6 +70,13 @@ class DiscoveryAgent extends Model
         return in_array($subnet->id, $allowed, true) || in_array($subnet->cidr, $allowed, true);
     }
 
+    public function canScanSubnet(int|Subnet $subnet): bool
+    {
+        $sub = $subnet instanceof Subnet ? $subnet : Subnet::find($subnet);
+
+        return $sub !== null && $this->isAllowedSubnet($sub);
+    }
+
     public function recordHeartbeat(?string $error = null): void
     {
         $this->update([

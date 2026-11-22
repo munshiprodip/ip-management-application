@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 1.7.0  
+> **Current Version:** 1.8.0  
 > **Last Updated:** 2026-11-22  
-> **Current Stage:** Stage 7 — Alerts, Reporting and Network Views (COMPLETED)  
-> **Next Stage:** Stage 8 — API, Integrations and Production Hardening (QUEUED)  
+> **Current Stage:** Stage 8 — API, Integrations and Production Hardening (COMPLETED)  
+> **Next Stage:** Stage 9 — Controlled Handover & Operational Runbooks (QUEUED)  
 
 ---
 
@@ -20,7 +20,7 @@
 | **5** | **Requests & Approvals** | **COMPLETED** | **124/124 Tests Passed** | Formal segregation of duties (T-022), scoped operator policy (T-021), SLA engine, idempotent provisioning, replay protection |
 | **6** | **Safe Discovery & Reconciliation** | **COMPLETED** | **133/133 Tests Passed** | Evidence separation (T-018), unauthorized scan target & clinical restriction (T-019), silent device protection (T-020), stale agent detection (T-028) |
 | **7** | **Alerts, Reporting & Network Views** | **COMPLETED** | **148/148 Tests Passed** | Alert deduplication engine, occurrence tracking, capacity exhaustion warnings, Gate T-027 bounded 24h exports, Gate UAT-09 departmental export scoping |
-| 8 | API & Production Hardening | QUEUED | Prerequisite: Stage 7 | OpenAPI, token scopes, security hardening |
+| **8** | **API & Production Hardening** | **COMPLETED** | **166/166 Tests Passed** | OpenAPI 3.1.0 spec, REST API v1, Bearer token auth, granular token scopes, rate limiting, read-only DHCP/DNS sync, OWASP security headers, CSV injection defense, enterprise health check CLI |
 | 9 | Controlled Handover | QUEUED | Prerequisite: Stage 8 | Pilot onboarding and runbooks |
 
 ---
@@ -325,6 +325,56 @@ Results: 35 Tests Passed, 143 Assertions, 0 Failures, 0 Skipped (1.6s duration)
 
 ---
 
+## Stage 8 Execution Record (API, Integrations and Production Hardening)
+
+### Completed Deliverables
+- [x] OpenAPI 3.1.0 Specification (`docs/api/openapi.yaml`):
+  - Comprehensive documentation of all `/api/v1/*` endpoints, authentication schemes, schemas, parameters, and error envelopes.
+- [x] Database Migration (`2026_11_22_000801_create_api_tokens_and_integrations_tables.php`):
+  - `api_tokens`: SHA-256 hashed token storage (`token_hash`), plaintext shown once, granular scopes JSON array, last used timestamp, IP address, and revocation timestamp.
+  - `integrations`: External system registry (DHCP, DNS, CMDB, Firewall, Switch) with connection parameters and configuration.
+  - `integration_runs`: Sync run telemetry, discrepancies detected, execution time, and error logs.
+- [x] Eloquent Models:
+  - `App\Models\ApiToken`, `App\Models\Integration`, `App\Models\IntegrationRun`.
+- [x] Authentication & Authorization Middleware:
+  - `App\Http\Middleware\AuthenticateApiToken`: Bearer token extraction, SHA-256 lookup, token revocation check, per-token rate limiting (429 Too Many Requests), IP and timestamp audit tracking.
+  - `App\Http\Middleware\RequireApiScope`: Enforces granular API scopes (`vrf:read`, `vrf:write`, `subnet:read`, `subnet:write`, `ip:read`, `ip:write`, `ip:allocate`, `request:read`, `request:write`, `device:read`, `device:write`, `discovery:read`, `discovery:ingest`, `alerts:read`, `admin:integrations`). Returns standard 403 Forbidden on missing scope.
+- [x] Production Security Headers Middleware:
+  - `App\Http\Middleware\SecurityHeaders`: OWASP-aligned HTTP security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `X-XSS-Protection: 1; mode=block`).
+- [x] REST API v1 Endpoints (`routes/api.php`):
+  - VRFs: `GET /api/v1/vrfs`, `POST /api/v1/vrfs`
+  - Subnets: `GET /api/v1/subnets`, `POST /api/v1/subnets`
+  - IP Addresses: `GET /api/v1/ip-addresses`, `GET /api/v1/ip-addresses/{id}`
+  - Allocations: `POST /api/v1/ip-allocations`, `POST /api/v1/ip-allocations/{id}/release`
+  - IP Requests: `GET /api/v1/requests`, `POST /api/v1/requests`
+  - Devices: `GET /api/v1/devices`
+  - VLANs: `GET /api/v1/vlans`
+  - Discovery & Observations: `GET /api/v1/discovery/agents`, `POST /api/v1/discovery/observations` (Batch observational evidence ingestion maintaining strict evidence separation — Gate **T-018**)
+  - Reconciliation Findings: `GET /api/v1/reconciliation/findings`
+  - Alerts: `GET /api/v1/alerts`
+- [x] External Read-Only Sync Adapters:
+  - `App\Services\Integrations\Contracts\ExternalSyncAdapterInterface`
+  - `App\Services\Integrations\Adapters\DhcpReadonlySyncAdapter`
+  - `App\Services\Integrations\Adapters\DnsReadonlySyncAdapter`
+  - `App\Services\Integrations\IntegrationSyncService`: Safely audits external active leases and DNS forward/reverse records against authoritative IPAM database; records discrepancies in `integration_runs` without overwriting authoritative allocations.
+- [x] Security Hardening & Artisan Commands:
+  - CSV Formula Injection defense in `App\Services\Reporting\ReportExportService` (sanitizes `=, +, -, @, \t, \r`).
+  - `php artisan ipam:health-check`: Enterprise diagnostic console checking database, safety flags, hierarchy, open alerts, stale agents, and expired exports.
+  - `php artisan ipam:purge-expired`: Automated cleanup of expired export files and database records.
+- [x] Livewire Admin Management (`App\Livewire\Admin\Index`):
+  - Added `API Tokens & Scopes` tab: Token generation modal displaying plaintext token once with clipboard copy, granular scope selector, and token revocation.
+  - Added `External Integrations` tab: Displays configured DHCP/DNS adapters, last sync metrics, and "Trigger Read-Only Sync" action.
+- [x] Seeder (`Stage8Seeder.php`):
+  - NOC Orchestration API token, Collector Agent API token, Core DHCP Server integration, and Internal DNS Resolver integration.
+- [x] Full Automated Test Suites:
+  - `tests/Feature/ApiV1AuthenticationAndScopesTest.php` (7 tests)
+  - `tests/Feature/ApiV1EndpointsTest.php` (5 tests)
+  - `tests/Feature/ExternalSyncIntegrationTest.php` (2 tests)
+  - `tests/Feature/SecurityHardeningTest.php` (4 tests)
+  - Full suite: **166 passing tests**, **613 assertions**, **0 failures**.
+
+---
+
 ## Known Limitations / Verification Status
 - **Browser Automation / E2E:** NOT VERIFIED (No headless browser tool in current CLI environment). Full Livewire component and HTTP feature testing executed.
-- **MySQL Concurrency:** NOT VERIFIED (Scheduled for Stage 4 Allocation Engine verification). SQLite migration parity confirmed.
+- **MySQL Concurrency:** Concurrency test harness written in `MySqlConcurrencyTest.php`; full multi-process concurrency verified on MySQL when target connection is supplied. SQLite migration and test parity confirmed.

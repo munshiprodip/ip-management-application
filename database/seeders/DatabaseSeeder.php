@@ -96,7 +96,7 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // Call Stage 1, Stage 2, Stage 3, Stage 4, Stage 5, Stage 6 & Stage 7 Seeders
+        // Call Stage 1, Stage 2, Stage 3, Stage 4, Stage 5, Stage 6, Stage 7 & Stage 8 Seeders
         $this->call([
             Stage1Seeder::class,
             Stage2Seeder::class,
@@ -105,6 +105,7 @@ class DatabaseSeeder extends Seeder
             Stage5Seeder::class,
             Stage6Seeder::class,
             Stage7Seeder::class,
+            Stage8Seeder::class,
         ]);
     }
 }

@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Stage 7 Complete (Alerts, Reporting & Network Views Delivered)  
+> **Status:** Stage 8 Complete (API, Integrations & Production Hardening Delivered)  
 > **Updated:** 2026-11-22  
 
 This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENTERPRISE_DEVELOPMENT_PLAN.md` to database tables, domain services, Livewire UI components, and automated test coverage.
@@ -26,5 +26,5 @@ This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENT
 | **M11** | **Reconciliation & Conflicts** | P1 | `reconciliation_findings` | `/discovery`, `Discovery\Index` | `ReconciliationEngineService` | `ReconciliationEngineTest`, `LivewireDiscoveryTest` | **Stage 6** |
 | **M12** | **Alerting & Notifications** | P1 | `alerts`, `notification_deliveries` | `/alerts`, `Alerts\Index` | `AlertDispatcherService` | `AlertDeduplicationTest`, `LivewireAlertsAndReportsTest` | **Stage 7** |
 | **M13** | **Dashboard & Reports** | P1 | `export_jobs`, `audit_events` | `/dashboard`, `/reports`, `Dashboard\Index`, `Reports\Index` | `ReportExportService` | `ReportExportTest` (T-027, UAT-09), `LivewireAlertsAndReportsTest` | **Stage 7** |
-| **M14** | **API & Integrations** | P1/P2 | `api_tokens`, `integrations` | `/api/v1/*` | `ApiV1Controllers`, `DhcpSyncAdapter` | *Planned: Stage 8* | Stage 8 |
-| **M15** | **Security & System Admin** | P0/P1 | `settings`, `audit_events`, `users` | `/admin`, `Admin\Index` | `AuditLogger`, `FeatureFlagService` | `AuditLogTest`, `UserRoleTest` | Stage 0 / Stage 1 |
+| **M14** | **API & Integrations** | P1/P2 | `api_tokens`, `integrations`, `integration_runs` | `/api/v1/*`, `Admin\Index` (Integrations & Tokens tabs) | `AuthenticateApiToken`, `RequireApiScope`, `SecurityHeaders`, `IntegrationSyncService`, `DhcpReadonlySyncAdapter`, `DnsReadonlySyncAdapter`, `ApiV1Controllers` | `ApiV1AuthenticationAndScopesTest`, `ApiV1EndpointsTest`, `ExternalSyncIntegrationTest` | **Stage 8** |
+| **M15** | **Security & System Admin** | P0/P1 | `settings`, `audit_events`, `users`, `export_jobs` | `/admin`, `Admin\Index` | `AuditLogger`, `FeatureFlagService`, `ReportExportService` (CSV sanitization), `IpamHealthCheckCommand`, `IpamPurgeExpiredCommand` | `SecurityHardeningTest`, `AuditLogTest`, `UserRoleTest`, `SafetyFlagsTest` | **Stage 0 / Stage 8** |

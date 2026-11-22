@@ -58,11 +58,11 @@ class ReportExportService
         // Generate rows based on type and user scope
         [$headers, $rows] = $this->queryExportData($user, $exportType, $filters);
 
-        // Build CSV stream/content
+        // Build CSV stream/content with formula injection protection
         $handle = fopen('php://temp', 'r+');
         fputcsv($handle, $headers);
         foreach ($rows as $row) {
-            fputcsv($handle, $row);
+            fputcsv($handle, $this->sanitizeForCsv($row));
         }
         rewind($handle);
         $csvContent = stream_get_contents($handle);
@@ -143,6 +143,26 @@ class ReportExportService
         }
 
         return $purgedCount;
+    }
+
+    /**
+     * Sanitizes CSV row values to prevent CSV / Spreadsheet formula injection attacks (Sec 15.2).
+     *
+     * @param array<mixed> $row
+     * @return array<mixed>
+     */
+    public function sanitizeForCsv(array $row): array
+    {
+        return array_map(function ($value) {
+            if (is_string($value) && $value !== '') {
+                $firstChar = $value[0];
+                if (in_array($firstChar, ['=', '+', '-', '@', "\t", "\r"], true)) {
+                    return "'" . $value;
+                }
+            }
+
+            return $value;
+        }, $row);
     }
 
     /**

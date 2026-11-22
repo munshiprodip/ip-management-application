@@ -113,3 +113,4 @@ class Alert extends Model
         return $query->where('rule_code', $val);
     }
 }
+
