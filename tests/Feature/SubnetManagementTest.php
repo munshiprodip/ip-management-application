@@ -152,4 +152,48 @@ class SubnetManagementTest extends TestCase
             ->assertSet('splitPreviewList.0.cidr', '192.168.0.0/25')
             ->assertSet('splitPreviewList.1.cidr', '192.168.0.128/25');
     }
+
+    public function test_livewire_subnets_expand_and_collapse_toggle(): void
+    {
+        $createAction = app(CreateSubnetAction::class);
+        $parent = $createAction->execute([
+            'name' => 'Campus Supernet',
+            'cidr' => '10.20.0.0/16',
+            'subnet_type' => SubnetType::AGGREGATE,
+        ]);
+
+        $child = $createAction->execute([
+            'parent_id' => $parent->id,
+            'name' => 'Campus Child Subnet',
+            'cidr' => '10.20.1.0/24',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+        ]);
+
+        $this->actingAs($this->admin);
+
+        // Initially collapsed: parent visible, child not visible in hierarchy tree
+        $component = Livewire::test(SubnetsIndex::class)
+            ->assertStatus(200)
+            ->assertSee('10.20.0.0/16')
+            ->assertDontSee('10.20.1.0/24')
+            ->assertSee('1 Child');
+
+        // Toggle expand: child becomes visible
+        $component->call('toggleExpand', $parent->id)
+            ->assertSee('10.20.1.0/24')
+            ->assertSee('Collapse (1)');
+
+        // Toggle collapse: child hidden again
+        $component->call('toggleExpand', $parent->id)
+            ->assertDontSee('10.20.1.0/24')
+            ->assertSee('1 Child');
+
+        // Expand all
+        $component->call('expandAll')
+            ->assertSee('10.20.1.0/24');
+
+        // Collapse all
+        $component->call('collapseAll')
+            ->assertDontSee('10.20.1.0/24');
+    }
 }

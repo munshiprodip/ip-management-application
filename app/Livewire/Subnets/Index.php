@@ -29,6 +29,7 @@ class Index extends Component
     // View state
     public string $viewMode = 'hierarchy'; // 'hierarchy' or 'flat'
     public ?int $selectedParentId = null;
+    public array $expandedSubnetIds = [];
 
     // Filters
     public string $search = '';
@@ -85,6 +86,25 @@ class Index extends Component
     {
         $this->selectedParentId = $parentId;
         $this->resetPage();
+    }
+
+    public function toggleExpand(int $subnetId): void
+    {
+        if (in_array($subnetId, $this->expandedSubnetIds, true)) {
+            $this->expandedSubnetIds = array_values(array_filter($this->expandedSubnetIds, fn ($id) => $id !== $subnetId));
+        } else {
+            $this->expandedSubnetIds[] = $subnetId;
+        }
+    }
+
+    public function expandAll(): void
+    {
+        $this->expandedSubnetIds = Subnet::has('children')->pluck('id')->all();
+    }
+
+    public function collapseAll(): void
+    {
+        $this->expandedSubnetIds = [];
     }
 
     public function openCreateModal(?int $parentId = null): void
@@ -158,6 +178,10 @@ class Index extends Component
                 ]);
 
                 session()->flash('success', "Subnet created successfully.");
+
+                if ($this->subnet_parent_id && !in_array($this->subnet_parent_id, $this->expandedSubnetIds, true)) {
+                    $this->expandedSubnetIds[] = $this->subnet_parent_id;
+                }
             }
 
             $this->showSubnetModal = false;
@@ -202,6 +226,7 @@ class Index extends Component
 
         try {
             $action->execute($subnet);
+            $this->expandedSubnetIds = array_values(array_filter($this->expandedSubnetIds, fn ($id) => $id !== $this->selectedSubnetId));
             session()->flash('success', "Subnet '{$subnet->cidr}' deleted successfully.");
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
@@ -288,11 +313,21 @@ class Index extends Component
 
         $subnets = $query->orderBy('start_hex')->paginate(12);
 
+        $childrenByParent = empty($this->expandedSubnetIds)
+            ? collect()
+            : Subnet::whereIn('parent_id', $this->expandedSubnetIds)
+                ->with('vlan')
+                ->withCount('children')
+                ->orderBy('start_hex')
+                ->get()
+                ->groupBy('parent_id');
+
         $selectedParent = $this->selectedParentId ? Subnet::find($this->selectedParentId) : null;
         $parentCandidates = Subnet::where('subnet_type', SubnetType::AGGREGATE)->get();
 
         return view('livewire.subnets.index', [
             'subnets' => $subnets,
+            'childrenByParent' => $childrenByParent,
             'vlans' => $vlans,
             'selectedParent' => $selectedParent,
             'parentCandidates' => $parentCandidates,
