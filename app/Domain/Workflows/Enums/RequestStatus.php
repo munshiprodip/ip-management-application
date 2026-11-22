@@ -41,3 +41,4 @@ enum RequestStatus: string
         return in_array($this, [self::PROVISIONED, self::REJECTED, self::CANCELLED], true);
     }
 }
+

@@ -45,3 +45,4 @@ class ChangeRecord extends Model
         return $this->belongsTo(User::class, 'actor_id');
     }
 }
+

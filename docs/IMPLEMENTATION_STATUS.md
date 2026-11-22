@@ -1,10 +1,10 @@
 # KYAMCH Smart IPAM — Implementation Status & Verification Checklist
 
 > **Document ID:** KYAMCH-IPAM-STATUS-001  
-> **Current Version:** 1.5.0  
+> **Current Version:** 1.6.0  
 > **Last Updated:** 2026-11-22  
-> **Current Stage:** Stage 5 — Requests and Approvals (COMPLETED)  
-> **Next Stage:** Stage 6 — Safe Discovery & Reconciliation (QUEUED)  
+> **Current Stage:** Stage 6 — Safe Discovery & Reconciliation (COMPLETED)  
+> **Next Stage:** Stage 7 — Alerts, Reporting and Network Views (QUEUED)  
 
 ---
 
@@ -18,10 +18,53 @@
 | **3** | **Device & Interface Inventory** | **COMPLETED** | **97/97 Tests Passed** | Multi-NIC devices, MAC normalization (EUI-48/64), asset tag uniqueness, hardware models, slide-over drawer |
 | **4** | **Pools, IP Explorer & Allocation (MVP)** | **COMPLETED** | **113/113 Tests Passed** | Virtual candidate window, atomic transactions, gates T-006–T-013 & T-024, post-release quarantine, MySQL concurrency harness |
 | **5** | **Requests & Approvals** | **COMPLETED** | **124/124 Tests Passed** | Formal segregation of duties (T-022), scoped operator policy (T-021), SLA engine, idempotent provisioning, replay protection |
-| 6 | Safe Discovery & Reconciliation | QUEUED | Prerequisite: Stage 4 | Opt-in read-only evidence collection |
+| **6** | **Safe Discovery & Reconciliation** | **COMPLETED** | **133/133 Tests Passed** | Evidence separation (T-018), unauthorized scan target & clinical restriction (T-019), silent device protection (T-020), stale agent detection (T-028) |
 | 7 | Alerts & Network Views | QUEUED | Prerequisite: Stages 5 & 6 | Deduplication, capacity dashboards |
 | 8 | API & Production Hardening | QUEUED | Prerequisite: Stage 7 | OpenAPI, token scopes, security hardening |
 | 9 | Controlled Handover | QUEUED | Prerequisite: Stage 8 | Pilot onboarding and runbooks |
+
+---
+
+## Stage 6 Execution Record
+
+### Completed Items
+- [x] Domain Enums (`App\Domain\Discovery\Enums`):
+  - `DiscoverySourceType`: `icmp`, `arp`, `ndp`, `snmp`, `lldp`, `dhcp_lease`, `dns_ptr`, `fixture`.
+  - `JobStatus`: `queued`, `running`, `completed`, `failed`, `cancelled`.
+  - `FindingType`: `unknown_active_ip`, `unexpected_mac`, `reported_duplicate_ip`, `dns_mismatch`, `stale_assignment`, `agent_down`.
+  - `FindingSeverity`: `info`, `warning`, `critical`.
+  - `FindingStatus`: `open`, `acknowledged`, `resolved`, `ignored`.
+- [x] Database Migration (`2026_11_22_000601_create_discovery_and_reconciliation_tables.php`):
+  - `discovery_agents`: Zone-scoped collector registry with allowed subnets, protocol allowlists, rate limiting, and heartbeat tracking.
+  - `discovery_jobs`: Execution tracking with metrics and error summaries.
+  - `ip_observations`: Append-only observational evidence records with timestamps, confidence scores, and source types.
+  - `reconciliation_findings`: Reviewable discrepancy tracking with severity, observed vs authoritative comparison, and resolution auditing.
+- [x] Eloquent Models:
+  - `DiscoveryAgent`, `DiscoveryJob`, `IpObservation`, `ReconciliationFinding`.
+- [x] Domain Services & Safe Adapters:
+  - `DiscoveryCollectorInterface`: Contract for read-only evidence gathering.
+  - `FixtureDiscoveryAdapter`: Deterministic synthetic evidence adapter for safe testing without live packet probing.
+  - `DiscoveryExecutionService`:
+    - Enforces **Gate T-019**: Rejects unauthorized scan targets outside agent allowlist.
+    - Enforces **Gate T-019 (Clinical Safety)**: Forbids active sweeps on clinical/biomedical restricted zones.
+    - Enforces **Gate T-018**: Observations append evidence and update connectivity status (`observed_online`), but NEVER mutate authoritative allocation state.
+    - Enforces **Gate T-020**: Unobserved allocated devices transition to `observed_offline` but are NEVER auto-freed (silent is not free).
+  - `ReconciliationEngineService`:
+    - Detects `unknown_active_ip` (critical rogue device detection).
+    - Detects `unexpected_mac` (MAC address drift / spoofing).
+    - Enforces **Gate T-028**: Flags stale discovery agents when heartbeat threshold is exceeded.
+    - Provides audited finding resolution workflow.
+- [x] Livewire 4 UI Management (`App\Livewire\Discovery\Index`):
+  - Safe Posture badge (`ACTIVE DISCOVERY DISABLED (SAFE)`).
+  - 4 KPI summary cards (Total Observations, Open Findings, Rogue IPs, Collector Health).
+  - Tabbed interface (`Reconciliation Findings`, `Observation Stream`, `Zone Collectors & Agents`, `Scan Job History`).
+  - Finding investigation drawer with observed vs authoritative comparison, technical metadata, and resolution forms.
+  - Safe discovery scan trigger modal.
+- [x] Database Seeder (`Stage6Seeder.php`):
+  - Seeds zone collector `AGENT-CORE-01`, completed job on radiology subnet, known CT scanner observation, unmanaged rogue laptop finding on `10.10.10.99`, and silent ICU monitor verifying allocation retention.
+- [x] Automated Tests:
+  - 133 total passing tests (9 newly added for Stage 6) with 462 assertions.
+  - Feature tests: `DiscoverySafetyTest` (Gates **T-018**, **T-019**, **T-020**, **T-028**), `ReconciliationEngineTest` (rogue IP and MAC drift detection, operator resolution), `LivewireDiscoveryTest` (dashboard rendering, finding investigation, safe scan trigger).
 
 ---
 

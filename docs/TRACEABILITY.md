@@ -1,7 +1,7 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Stage 5 Complete (Requests & Approvals Delivered)  
+> **Status:** Stage 6 Complete (Discovery & Reconciliation Delivered)  
 > **Updated:** 2026-11-22  
 
 This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENTERPRISE_DEVELOPMENT_PLAN.md` to database tables, domain services, Livewire UI components, and automated test coverage.
@@ -22,8 +22,8 @@ This matrix maps functional requirements and modules from `docs/NETWORK_IPAM_ENT
 | **M07** | **IP Address Explorer & Records** | P0 | `ip_addresses` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator` | `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **Stage 4** |
 | **M08** | **Smart Allocation & Quarantine** | P0 | `ip_assignments`, `ip_addresses`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `AllocateIpAction`, `ReleaseIpAction`, `TransferIpAction`, `ReserveIpAction` | `IpAllocationTest` (T-006–T-013, T-024), `MySqlConcurrencyTest` | **Stage 4** |
 | **M09** | **Approval & Change Workflow** | P1 | `ip_requests`, `request_approvals`, `change_records` | `/requests`, `Requests\Index` | `SubmitRequestAction`, `ApproveRequestAction`, `RejectRequestAction`, `ProvisionRequestAction`, `ApprovalWorkflowService` | `RequestWorkflowTest` (T-021, T-022), `LivewireRequestsTest` | **Stage 5** |
-| **M10** | **Safe Discovery & Observations** | P1 | `discovery_agents`, `discovery_jobs`, `ip_observations` | `/discovery`, `Discovery\Index` | `DiscoveryCollectorInterface`, `FixtureDiscoveryAdapter` | *Planned: Stage 6 (T-018–T-020)* | Stage 6 |
-| **M11** | **Reconciliation & Conflicts** | P1 | `reconciliation_findings` | `/reconciliation` | `ReconciliationEngineService` | *Planned: Stage 6* | Stage 6 |
+| **M10** | **Safe Discovery & Observations** | P1 | `discovery_agents`, `discovery_jobs`, `ip_observations` | `/discovery`, `Discovery\Index` | `DiscoveryExecutionService`, `DiscoveryCollectorInterface`, `FixtureDiscoveryAdapter` | `DiscoverySafetyTest` (T-018, T-019, T-020, T-028) | **Stage 6** |
+| **M11** | **Reconciliation & Conflicts** | P1 | `reconciliation_findings` | `/discovery`, `Discovery\Index` | `ReconciliationEngineService` | `ReconciliationEngineTest`, `LivewireDiscoveryTest` | **Stage 6** |
 | **M12** | **Alerting & Notifications** | P1 | `alerts`, `notification_deliveries` | `/alerts`, `Alerts\Index` | `AlertDispatcherService`, `DeduplicationService` | *Planned: Stage 7* | Stage 7 |
 | **M13** | **Dashboard & Reports** | P1 | Pre-aggregated metrics | `/dashboard`, `/reports` | `ReportingService`, `CsvExportJob` | *Planned: Stage 7* | Stage 7 |
 | **M14** | **API & Integrations** | P1/P2 | `api_tokens`, `integrations` | `/api/v1/*` | `ApiV1Controllers`, `DhcpSyncAdapter` | *Planned: Stage 8* | Stage 8 |

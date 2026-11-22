@@ -163,3 +163,4 @@ class IpRequest extends Model
         return $query->where('status', RequestStatus::PROVISIONED->value);
     }
 }
+

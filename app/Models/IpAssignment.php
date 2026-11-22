@@ -44,6 +44,11 @@ class IpAssignment extends Model
         return $this->belongsTo(DeviceInterface::class, 'interface_id');
     }
 
+    public function deviceInterface(): BelongsTo
+    {
+        return $this->interface();
+    }
+
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by_user_id');

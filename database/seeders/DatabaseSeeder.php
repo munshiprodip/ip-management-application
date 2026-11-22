@@ -96,13 +96,14 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // Call Stage 1, Stage 2, Stage 3, Stage 4 & Stage 5 Seeders
+        // Call Stage 1, Stage 2, Stage 3, Stage 4, Stage 5 & Stage 6 Seeders
         $this->call([
             Stage1Seeder::class,
             Stage2Seeder::class,
             Stage3Seeder::class,
             Stage4Seeder::class,
             Stage5Seeder::class,
+            Stage6Seeder::class,
         ]);
     }
 }

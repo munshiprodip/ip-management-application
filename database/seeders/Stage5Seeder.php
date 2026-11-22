@@ -82,7 +82,9 @@ class Stage5Seeder extends Seeder
             ]);
 
             // Independent approval by approver (T-022 compliant: approver != icuOperator)
-            $approveAction->execute($req1, $approver, 'Approved telemetry deployment for ICU Bed 08.');
+            if ($req1->isPending()) {
+                $approveAction->execute($req1, $approver, 'Approved telemetry deployment for ICU Bed 08.');
+            }
         }
 
         // Request 2: Pending IP Assignment for Radiology
@@ -135,8 +137,12 @@ class Stage5Seeder extends Seeder
                 'idempotency_key' => 'SEED-REQ-00004',
             ]);
 
-            $approveAction->execute($req4, $approver, 'Approved for PACS archive integration.');
-            $provisionAction->execute($req4, $netAdmin);
+            if ($req4->isPending()) {
+                $approveAction->execute($req4, $approver, 'Approved for PACS archive integration.');
+            }
+            if ($req4->isApproved()) {
+                $provisionAction->execute($req4, $netAdmin);
+            }
         }
     }
 }
