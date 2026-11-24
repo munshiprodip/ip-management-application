@@ -1,13 +1,15 @@
 # KYAMCH Smart IPAM — Production Deployment & Server Operations Guide
 
+> **Official Repository:** `https://github.com/munshiprodip/ip-management-application.git`  
+> **Maintainer:** Prodip Munshi (`munshiprodip@gmail.com`)  
 > **Target Platform:** Ubuntu 22.04 / 24.04 LTS (or Debian 12 / RHEL 9)  
-> **Application Stack:** Laravel 13, PHP 8.3+, Livewire 4, Tailwind CSS 4, Vite, MySQL 8.0+ InnoDB, Nginx, Supervisor, Redis/Database Queue  
+> **Application Stack:** Laravel 13, PHP 8.3+, Livewire 4, Tailwind CSS 4, Vite, MySQL 8.0+ InnoDB, Nginx, Supervisor, Database Queue  
 > **Status:** Production-Ready, 147 Automated Tests Passing (100% Pass Rate)
 
 ---
 
 ## Table of Contents
-1. [Pushing to GitHub](#1-pushing-to-github)
+1. [GitHub Repository & Local Push](#1-github-repository--local-push)
 2. [Production Server Prerequisites](#2-production-server-prerequisites)
 3. [Step-by-Step Server Setup](#3-step-by-step-server-setup)
    - [Step 1: Install System Packages](#step-1-install-system-packages)
@@ -22,34 +24,29 @@
    - [Step 10: Install SSL Certificate (Let's Encrypt / Certbot)](#step-10-install-ssl-certificate-lets-encrypt--certbot)
    - [Step 11: Setup Queue Worker with Supervisor](#step-11-setup-queue-worker-with-supervisor)
    - [Step 12: Configure Laravel Scheduler (Cron)](#step-12-configure-laravel-scheduler-cron)
-4. [Zero-Downtime Deployment Script (CI/CD / Updates)](#4-zero-downtime-deployment-script-cicd--updates)
-5. [Security & Hospital Network Hardening](#5-security--hospital-network-hardening)
+4. [Role & Access Governance Verification](#4-role--access-governance-verification)
+5. [Zero-Downtime Deployment Script (CI/CD / Updates)](#5-zero-downtime-deployment-script-cicd--updates)
+6. [Security & Hospital Network Hardening](#6-security--hospital-network-hardening)
 
 ---
 
-## 1. Pushing to GitHub
+## 1. GitHub Repository & Local Push
 
-All local commits, tests, and sensitive file exclusions (`.gitignore`, `.env.example`) are configured and verified.
+The local repository is linked and tracking the GitHub remote:
 
-### 1.1 Create Repository on GitHub
-1. Open [GitHub](https://github.com/new).
-2. Create a new repository named `KYAMCH_IPAM` (select **Private** to protect hospital infrastructure metadata).
-3. Do **not** initialize with README, .gitignore, or license (the repository already has these).
+- **Repository URL:** `https://github.com/munshiprodip/ip-management-application.git`
+- **Default Branch:** `main`
 
-### 1.2 Link Remote & Push
-Run these commands from your local project terminal:
-
+### 1.1 Local Git Identity Configuration
 ```bash
-# Rename branch to main (if not already main)
-git branch -M main
+git config user.name "Prodip Munshi"
+git config user.email "munshiprodip@gmail.com"
+```
 
-# Add your GitHub remote repository URL (replace <YOUR_GITHUB_USERNAME>)
-git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/KYAMCH_IPAM.git
-# or with SSH:
-# git remote add origin git@github.com:<YOUR_GITHUB_USERNAME>/KYAMCH_IPAM.git
-
-# Push the codebase to GitHub
-git push -u origin main
+### 1.2 Pushing Updates to GitHub
+```bash
+# Push latest commits to main
+git push origin main
 ```
 
 ---
@@ -63,7 +60,7 @@ Ensure your production server meets these minimum hardware and software standard
 - **PHP:** PHP 8.3 or 8.4 with FPM and core extensions (`bcmath`, `curl`, `mbstring`, `mysql`, `xml`, `zip`, `intl`, `posix`).
 - **Database:** MySQL 8.0+ (or MariaDB 10.11+) with InnoDB storage engine.
 - **Web Server:** Nginx 1.20+.
-- **Process Manager:** Supervisor (manages queue workers for network scanning).
+- **Process Manager:** Supervisor (manages background queue workers for network scanning).
 - **Node.js:** Node.js 20 LTS + npm (for Vite frontend compilation).
 - **Network Permissions:** ICMP echo capability (`ping`) enabled on the web/queue worker host.
 
@@ -136,7 +133,7 @@ Clone into `/var/www/kyamch-ipam`:
 
 ```bash
 # Clone the repository
-sudo git clone https://github.com/<YOUR_GITHUB_USERNAME>/KYAMCH_IPAM.git /var/www/kyamch-ipam
+sudo git clone https://github.com/munshiprodip/ip-management-application.git /var/www/kyamch-ipam
 
 # Change directory
 cd /var/www/kyamch-ipam
@@ -392,7 +389,28 @@ Add this line:
 
 ---
 
-## 4. Zero-Downtime Deployment Script (CI/CD / Updates)
+## 4. Role & Access Governance Verification
+
+Verify the three-tier security access model immediately following deployment:
+
+1. **Super Admin Access (`admin@kyamch.local`):**
+   - Access **User Management** at `https://ipam.kyamch.edu.bd/users`.
+   - Access **Role & Permission Governance** at `https://ipam.kyamch.edu.bd/roles`.
+   - Has full root authority to create, edit, deactivate, and assign any role (`Super Admin`, `Admin`, `User`).
+
+2. **Admin Access (`netadmin@kyamch.local`):**
+   - Can access **User Management** to create/edit Admin and User accounts.
+   - Strictly blocked from assigning or creating Super Admin accounts.
+   - Strictly blocked from editing, deactivating, or deleting Super Admin accounts.
+   - Blocked with `403 Forbidden` from accessing `/roles`.
+
+3. **User Access (`operator@kyamch.local`):**
+   - Full operational control over core IPAM features: Dashboard, Subnets & CIDR Hierarchy, 802.1Q VLANs, IP Explorer & Allocations, ICMP Ping reachability, Network Scanner discovery, Campuses & Sites, and Host Types.
+   - Blocked with `403 Forbidden` from both `/users` and `/roles`.
+
+---
+
+## 5. Zero-Downtime Deployment Script (CI/CD / Updates)
 
 When deploying future updates from GitHub, use this automated script. Save it on your server as `/var/www/kyamch-ipam/deploy.sh`:
 
@@ -450,7 +468,7 @@ sudo /var/www/kyamch-ipam/deploy.sh
 
 ---
 
-## 5. Security & Hospital Network Hardening
+## 6. Security & Hospital Network Hardening
 
 1. **Firewall (UFW):**
    ```bash
