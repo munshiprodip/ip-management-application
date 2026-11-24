@@ -31,12 +31,6 @@ class AuthenticationTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->post('/login', [
-            'email' => 'netadmin@kyamch.local',
-            'password' => 'Password123!',
-        ]);
-
-        // Alternatively test via Livewire login component or post
         $component = \Livewire\Livewire::test(\App\Livewire\Auth\Login::class)
             ->set('email', 'netadmin@kyamch.local')
             ->set('password', 'Password123!')
@@ -46,6 +40,29 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user);
 
         // Verify audit event recorded
+        $this->assertDatabaseHas('audit_events', [
+            'event_type' => 'auth.login',
+            'actor_id' => $user->id,
+        ]);
+    }
+
+    public function test_users_can_authenticate_via_standard_http_post_fallback(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'operator@kyamch.local',
+            'password' => Hash::make('Password123!'),
+            'role' => UserRole::OPERATOR,
+            'status' => 'active',
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'operator@kyamch.local',
+            'password' => 'Password123!',
+        ]);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
+
         $this->assertDatabaseHas('audit_events', [
             'event_type' => 'auth.login',
             'actor_id' => $user->id,

@@ -197,6 +197,9 @@ composer install --no-dev --optimize-autoloader
 # Install npm packages and build production assets with Vite
 npm ci
 npm run build
+
+# Publish Livewire static assets to public/vendor/livewire
+php artisan livewire:publish --assets
 ```
 
 ---
@@ -261,7 +264,7 @@ Paste the following production configuration (replace `ipam.kyamch.edu.bd` with 
 server {
     listen 80;
     listen [::]:80;
-    server_name ipam.kyamch.edu.bd;
+    server_name ipam.kyamch.edu.bd 192.168.11.197 _;
     root /var/www/kyamch-ipam/public;
 
     add_header X-Frame-Options "SAMEORIGIN";
@@ -276,7 +279,14 @@ server {
     # Maximum file upload size
     client_max_body_size 20M;
 
+    # Primary Laravel application routing
     location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # CRITICAL: Livewire dynamic script & update endpoints
+    # Ensures /livewire/livewire.js, /livewire/livewire.min.js and /livewire/update route to PHP
+    location ^~ /livewire {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
@@ -297,8 +307,9 @@ server {
         deny all;
     }
 
-    # Static asset caching
+    # Static asset caching (with try_files fallback so dynamic routes never 404)
     location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        try_files $uri /index.php?$query_string;
         expires 1y;
         add_header Cache-Control "public, no-transform";
     }

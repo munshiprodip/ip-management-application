@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
 use App\Livewire\Auth\Login;
 use App\Livewire\Dashboard\Index as DashboardIndex;
 use App\Livewire\IPAddresses\Index as IPAddressesIndex;
@@ -10,9 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// Guest Authentication Routes
+// Guest Authentication Routes (Reactive Livewire + Standard HTTP POST Failsafe)
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
+    Route::post('/login', [LoginController::class, 'login'])->name('login.post');
 });
 
 // Authenticated Enterprise IPAM Routes
