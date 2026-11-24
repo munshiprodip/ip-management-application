@@ -44,7 +44,7 @@
                 value="{{ old('email') }}"
                 required
                 autocomplete="email"
-                placeholder="operator@kyamch.local"
+                placeholder="operator@kyamch.edu.bd"
                 class="w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
             />
             @error('email')
@@ -89,55 +89,5 @@
             </span>
         </button>
     </form>
-
-    <!-- Quick Access Role Helper Buttons (Dual Mode: DOM + Livewire) -->
-    <div class="mt-6 pt-5 border-t border-slate-800">
-        <p class="text-[11px] text-slate-400 font-mono mb-2 text-center">Quick Select Role:</p>
-        <div class="grid grid-cols-3 gap-1.5 text-[10px]">
-            <button 
-                type="button" 
-                onclick="document.getElementById('email').value='admin@kyamch.local'; document.getElementById('password').value='Password123!';" 
-                wire:click="fillAccount('admin')" 
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition text-center truncate cursor-pointer"
-            >
-                Super Admin
-            </button>
-            <button 
-                type="button" 
-                onclick="document.getElementById('email').value='netadmin@kyamch.local'; document.getElementById('password').value='Password123!';" 
-                wire:click="fillAccount('netadmin')" 
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition text-center truncate cursor-pointer"
-            >
-                Net Admin
-            </button>
-            <button 
-                type="button" 
-                onclick="document.getElementById('email').value='operator@kyamch.local'; document.getElementById('password').value='Password123!';" 
-                wire:click="fillAccount('operator')" 
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition text-center truncate cursor-pointer"
-            >
-                IP Operator
-            </button>
-            <button 
-                type="button" 
-                onclick="document.getElementById('email').value='auditor@kyamch.local'; document.getElementById('password').value='Password123!';" 
-                wire:click="fillAccount('auditor')" 
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition text-center truncate cursor-pointer"
-            >
-                Auditor
-            </button>
-            <button 
-                type="button" 
-                onclick="document.getElementById('email').value='viewer@kyamch.local'; document.getElementById('password').value='Password123!';" 
-                wire:click="fillAccount('viewer')" 
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition text-center truncate cursor-pointer"
-            >
-                Viewer
-            </button>
-            <div class="px-2 py-1 bg-slate-950 rounded text-slate-400 text-center truncate font-mono select-all">
-                PWD: Password123!
-            </div>
-        </div>
-    </div>
 </div>
 

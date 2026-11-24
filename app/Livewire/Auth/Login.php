@@ -85,25 +85,6 @@ class Login extends Component
         $this->redirectIntended(route('dashboard'));
     }
 
-    /**
-     * Helper for development/testing: pre-fills credentials
-     */
-    public function fillAccount(string $role): void
-    {
-        $map = [
-            'admin' => 'admin@kyamch.local',
-            'netadmin' => 'netadmin@kyamch.local',
-            'operator' => 'operator@kyamch.local',
-            'auditor' => 'auditor@kyamch.local',
-            'viewer' => 'viewer@kyamch.local',
-        ];
-
-        if (isset($map[$role])) {
-            $this->email = $map[$role];
-            $this->password = 'Password123!';
-        }
-    }
-
     public function render()
     {
         return view('livewire.auth.login');

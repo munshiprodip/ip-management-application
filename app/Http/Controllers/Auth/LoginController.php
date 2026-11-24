@@ -72,3 +72,4 @@ class LoginController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 }
+
