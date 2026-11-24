@@ -28,7 +28,7 @@ function registerSearchableSelect() {
                     });
                     observer.observe(select, { childList: true, subtree: true, attributes: true });
 
-                    // Watch Livewire model changes if component has $wire
+                    // Watch Livewire model changes if component has $wire or getLivewire()
                     try {
                         let wireModel = null;
                         for (let attr of select.attributes) {
@@ -37,8 +37,9 @@ function registerSearchableSelect() {
                                 break;
                             }
                         }
-                        if (wireModel && this.$wire) {
-                            this.$watch(`$wire.${wireModel}`, (newVal) => {
+                        const lw = this.getLivewire();
+                        if (wireModel && lw && typeof lw.$watch === 'function') {
+                            lw.$watch(wireModel, (newVal) => {
                                 if (select && select.value != newVal) {
                                     select.value = newVal;
                                 }
@@ -54,14 +55,26 @@ function registerSearchableSelect() {
             },
 
             getLivewire() {
+                if (config && config.wire) return config.wire;
                 try {
                     if (this.$wire) return this.$wire;
                 } catch (e) {}
                 try {
-                    const select = this.$el.querySelector('select');
-                    const root = (select || this.$el).closest('[wire\\:id]');
-                    if (root && window.Livewire) {
-                        return window.Livewire.find(root.getAttribute('wire:id'));
+                    let cur = this.$el;
+                    while (cur) {
+                        if (cur.__livewire) {
+                            return cur.__livewire.$wire || cur.__livewire;
+                        }
+                        if (cur.hasAttribute && cur.hasAttribute('wire:snapshot')) {
+                            if (window.Livewire && typeof window.Livewire.all === 'function') {
+                                for (let comp of window.Livewire.all()) {
+                                    if (comp.el === cur) {
+                                        return comp.$wire || comp;
+                                    }
+                                }
+                            }
+                        }
+                        cur = cur.parentElement;
                     }
                 } catch (e) {}
                 return null;
@@ -81,9 +94,18 @@ function registerSearchableSelect() {
                     });
                 }
                 this.options = opts;
-                this.selectedValue = select.value;
 
-                const currentOpt = opts.find(o => String(o.value) === String(select.value));
+                let activeVal = select.value;
+                if (!activeVal || activeVal === '') {
+                    const selOption = select.querySelector('option[selected]') || (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null);
+                    if (selOption && selOption.value) {
+                        activeVal = selOption.value;
+                        select.value = activeVal;
+                    }
+                }
+                this.selectedValue = activeVal;
+
+                const currentOpt = opts.find(o => String(o.value) === String(activeVal));
                 if (currentOpt && currentOpt.label) {
                     this.selectedLabel = currentOpt.label;
                 } else if (opts.length > 0 && select.selectedIndex >= 0 && opts[select.selectedIndex]) {
@@ -133,6 +155,10 @@ function registerSearchableSelect() {
                 const select = this.$el.querySelector('select');
                 if (select) {
                     select.value = val;
+                    // Ensure matching option is marked selected in DOM
+                    for (let i = 0; i < select.options.length; i++) {
+                        select.options[i].selected = (String(select.options[i].value) === String(val));
+                    }
                     select.dispatchEvent(new Event('input', { bubbles: true }));
                     select.dispatchEvent(new Event('change', { bubbles: true }));
 
@@ -147,18 +173,40 @@ function registerSearchableSelect() {
                                     break;
                                 }
                             }
+                            const numVal = Number(val);
+                            const finalVal = (!isNaN(numVal) && String(numVal) === String(val).trim()) ? numVal : val;
+
                             if (wireModel) {
-                                const numVal = Number(val);
-                                const finalVal = (!isNaN(numVal) && String(numVal) === String(val).trim()) ? numVal : val;
-                                lw.set(wireModel, finalVal);
+                                if (typeof lw.$set === 'function') {
+                                    lw.$set(wireModel, finalVal, true);
+                                } else if (typeof lw.set === 'function') {
+                                    lw.set(wireModel, finalVal, true);
+                                } else {
+                                    lw[wireModel] = finalVal;
+                                }
+
+                                if (wireModel === 'selectedSubnetId') {
+                                    try {
+                                        const u = new URL(window.location.href);
+                                        if (finalVal) {
+                                            u.searchParams.set('subnet', finalVal);
+                                        } else {
+                                            u.searchParams.delete('subnet');
+                                        }
+                                        window.history.replaceState({}, '', u);
+                                    } catch (e) {}
+                                }
                             }
 
                             const wireChange = select.getAttribute('wire:change');
                             if (wireChange) {
-                                if (wireChange.includes('(')) {
-                                    lw.$call(wireChange);
-                                } else {
-                                    lw.call(wireChange, val);
+                                const methodName = wireChange.replace(/\(.*\)/, '').trim();
+                                if (methodName) {
+                                    if (typeof lw[methodName] === 'function') {
+                                        lw[methodName](finalVal);
+                                    } else if (typeof lw.$call === 'function') {
+                                        lw.$call(methodName, finalVal);
+                                    }
                                 }
                             }
                         }

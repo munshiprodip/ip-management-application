@@ -88,8 +88,8 @@ class Subnet extends Model
 
     /**
      * Calculate allocated address count.
-     * Leaf subnets count active materialized IPs.
-     * Containers sum child capacities.
+     * Leaf subnets count active materialized IPs (assigned, reserved, quarantined).
+     * Aggregate containers sum child active allocations without double-counting capacities.
      */
     public function allocatedCount(bool $recursive = false): int
     {
@@ -103,17 +103,27 @@ class Subnet extends Model
                 ->count();
         }
 
-        if (! $recursive) {
-            $totalChildCapacity = 0;
-            foreach ($this->children as $child) {
-                $totalChildCapacity += (int) (string) $child->totalAddresses();
-            }
-            return $totalChildCapacity;
+        $sum = 0;
+        foreach ($this->children as $child) {
+            $sum += $child->allocatedCount(true);
+        }
+        return $sum;
+    }
+
+    /**
+     * Calculate strictly assigned address count (excluding reserved and quarantined).
+     */
+    public function assignedCount(bool $recursive = true): int
+    {
+        if ($this->isLeaf()) {
+            return $this->ipAddresses()
+                ->where('allocation_status', \App\Domain\AddressSpace\Enums\IpAllocationStatus::ASSIGNED)
+                ->count();
         }
 
         $sum = 0;
         foreach ($this->children as $child) {
-            $sum += $child->allocatedCount(true);
+            $sum += $child->assignedCount(true);
         }
         return $sum;
     }

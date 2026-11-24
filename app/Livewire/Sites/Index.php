@@ -71,8 +71,11 @@ class Index extends Component
         $this->showModal = true;
     }
 
-    public function saveSite(CreateSiteAction $createAction, UpdateSiteAction $updateAction): void
+    public function saveSite(?CreateSiteAction $createAction = null, ?UpdateSiteAction $updateAction = null): void
     {
+        $createAction ??= app(CreateSiteAction::class);
+        $updateAction ??= app(UpdateSiteAction::class);
+
         $this->validate([
             'name' => ['required', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:32'],
@@ -90,21 +93,29 @@ class Index extends Component
                     'status' => $this->status,
                     'is_default' => $this->is_default,
                 ]);
-                session()->flash('success', "Campus '{$site->name}' updated successfully.");
+                $msg = "Campus '{$site->name}' updated successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             } else {
-                $createAction->execute([
+                $created = $createAction->execute([
                     'name' => $this->name,
                     'code' => $this->code,
                     'description' => $this->description,
                     'status' => $this->status,
                     'is_default' => $this->is_default,
                 ]);
-                session()->flash('success', "Campus created successfully.");
+                $msg = "Campus created successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             }
 
             $this->showModal = false;
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            $this->setErrorBag($ve->validator->getMessageBag());
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Validation failed: ' . $ve->getMessage()]);
         } catch (\Exception $e) {
             $this->addError('code', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
@@ -121,9 +132,12 @@ class Index extends Component
 
         try {
             $action->execute($site);
-            session()->flash('success', "Campus '{$site->name}' deleted successfully.");
+            $msg = "Campus '{$site->name}' deleted successfully.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
 
         $this->showDeleteModal = false;

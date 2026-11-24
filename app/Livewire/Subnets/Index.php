@@ -144,6 +144,13 @@ class Index extends Component
         $this->showSubnetModal = true;
     }
 
+    public function closeSubnetModal(): void
+    {
+        $this->showSubnetModal = false;
+        $this->resetValidation();
+        $this->reset(['subnet_name', 'subnet_cidr', 'subnet_mask', 'subnet_gateway', 'subnet_description', 'subnet_vlan_id', 'subnet_site_id', 'isEditing', 'selectedSubnetId']);
+    }
+
     public function updatedSubnetCidr(string $value): void
     {
         try {
@@ -189,8 +196,15 @@ class Index extends Component
         $this->showSubnetModal = true;
     }
 
-    public function saveSubnet(CreateSubnetAction $createAction, UpdateSubnetAction $updateAction): void
+    public function saveSubnet(?CreateSubnetAction $createAction = null, ?UpdateSubnetAction $updateAction = null): void
     {
+        $createAction ??= app(CreateSubnetAction::class);
+        $updateAction ??= app(UpdateSubnetAction::class);
+
+        $this->subnet_parent_id = !empty($this->subnet_parent_id) ? (int) $this->subnet_parent_id : null;
+        $this->subnet_vlan_id = !empty($this->subnet_vlan_id) ? (int) $this->subnet_vlan_id : null;
+        $this->subnet_site_id = !empty($this->subnet_site_id) ? (int) $this->subnet_site_id : null;
+
         $this->validate([
             'subnet_parent_id' => ['nullable', 'integer', 'exists:subnets,id'],
             'subnet_name' => ['required', 'string', 'max:128'],
@@ -200,6 +214,7 @@ class Index extends Component
             'subnet_type' => ['required', 'string'],
             'subnet_status' => ['required', 'in:planned,active,deprecated,retired'],
             'subnet_vlan_id' => ['nullable', 'integer', 'exists:vlans,id'],
+            'subnet_site_id' => ['nullable', 'integer', 'exists:sites,id'],
         ]);
 
         try {
@@ -219,9 +234,11 @@ class Index extends Component
                     'allocation_enabled' => $this->subnet_allocation_enabled,
                 ]);
 
-                session()->flash('success', "Subnet '{$subnet->cidr}' updated successfully.");
+                $msg = "Subnet '{$subnet->cidr}' updated successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             } else {
-                $createAction->execute([
+                $subnet = $createAction->execute([
                     'site_id' => $this->subnet_site_id,
                     'parent_id' => $this->subnet_parent_id,
                     'vlan_id' => $this->subnet_vlan_id,
@@ -235,7 +252,9 @@ class Index extends Component
                     'allocation_enabled' => $this->subnet_allocation_enabled,
                 ]);
 
-                session()->flash('success', "Subnet created successfully.");
+                $msg = "Subnet '{$subnet->cidr}' created successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
 
                 if ($this->subnet_parent_id && !in_array($this->subnet_parent_id, $this->expandedSubnetIds, true)) {
                     $this->expandedSubnetIds[] = $this->subnet_parent_id;
@@ -243,8 +262,29 @@ class Index extends Component
             }
 
             $this->showSubnetModal = false;
-        } catch (\Exception $e) {
-            $this->addError('subnet_cidr', $e->getMessage());
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            foreach ($ve->errors() as $key => $messages) {
+                $mappedKey = match($key) {
+                    'cidr' => 'subnet_cidr',
+                    'parent_id' => 'subnet_parent_id',
+                    'name' => 'subnet_name',
+                    'subnet_type', 'type' => 'subnet_type',
+                    'gateway' => 'subnet_gateway',
+                    'subnet_mask' => 'subnet_mask',
+                    'vlan_id' => 'subnet_vlan_id',
+                    'site_id' => 'subnet_site_id',
+                    default => $key,
+                };
+                foreach ($messages as $msg) {
+                    $this->addError($mappedKey, $msg);
+                }
+            }
+            $errMsg = $ve->getMessage();
+            $this->addError('general', $errMsg);
+            $this->dispatch('notify', ['type' => 'error', 'message' => $errMsg]);
+        } catch (\Throwable $e) {
+            $this->addError('general', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
@@ -286,19 +326,22 @@ class Index extends Component
         $this->showDeleteModal = true;
     }
 
-    public function deleteSubnet(DeleteSubnetAction $action): void
+    public function deleteSubnet(?DeleteSubnetAction $action = null): void
     {
+        $action ??= app(DeleteSubnetAction::class);
         $subnet = Subnet::findOrFail($this->selectedSubnetId);
 
         try {
             $action->execute($subnet);
             $this->expandedSubnetIds = array_values(array_filter($this->expandedSubnetIds, fn ($id) => $id !== $this->selectedSubnetId));
-            session()->flash('success', "Subnet '{$subnet->cidr}' deleted successfully.");
-        } catch (\Exception $e) {
+            $msg = "Subnet '{$subnet->cidr}' deleted successfully.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
+            $this->showDeleteModal = false;
+        } catch (\Throwable $e) {
             session()->flash('error', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
-
-        $this->showDeleteModal = false;
     }
 
     public function openCalculator(?string $cidr = null): void
@@ -394,7 +437,12 @@ class Index extends Component
                 ->groupBy('parent_id');
 
         $selectedParent = $this->selectedParentId ? Subnet::find($this->selectedParentId) : null;
-        $parentCandidates = Subnet::where('subnet_type', SubnetType::AGGREGATE)->get();
+        $parentCandidates = Subnet::where('subnet_type', SubnetType::AGGREGATE)
+            ->when($this->isEditing && $this->selectedSubnetId, function ($q) {
+                $q->where('id', '!=', $this->selectedSubnetId);
+            })
+            ->orderBy('start_hex')
+            ->get();
 
         return view('livewire.subnets.index', [
             'subnets' => $subnets,

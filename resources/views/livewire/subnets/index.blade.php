@@ -1,6 +1,24 @@
 <div class="space-y-6">
+    <!-- Inline Flash Notifications (Direct Component Feedback) -->
+    @if (session('success'))
+        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs rounded-xl shadow-xs flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span class="font-medium">{{ session('success') }}</span>
+            </div>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="p-3 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-xl shadow-xs flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span class="font-medium">{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
+
     <!-- Header / Context Bar -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2 text-xs text-slate-500 font-mono mb-1">
                 <a href="{{ route('dashboard') }}" class="hover:text-emerald-600">KYAMCH IPAM</a>
@@ -13,30 +31,30 @@
             </p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
             <button
                 wire:click="openCalculator()"
                 type="button"
-                class="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold shadow-xs transition"
+                class="flex-1 sm:flex-initial justify-center inline-flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold shadow-xs transition"
             >
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                CIDR Calculator
+                <span>CIDR Calculator</span>
             </button>
 
             <button
                 wire:click="openCreateModal({{ $selectedParentId }})"
                 type="button"
-                class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                class="flex-1 sm:flex-initial justify-center inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-xs transition"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                {{ $selectedParent ? 'Add Child Prefix' : 'Add Root Subnet' }}
+                <span>{{ $selectedParent ? 'Add Child Prefix' : 'Add Root Subnet' }}</span>
             </button>
         </div>
     </div>
 
     <!-- Hierarchy Breadcrumbs -->
-    <div class="bg-slate-50 dark:bg-slate-900/60 rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-        <div class="flex items-center gap-2 overflow-x-auto font-mono">
+    <div class="bg-slate-50 dark:bg-slate-900/60 rounded-xl px-3 sm:px-4 py-3 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2 overflow-x-auto font-mono py-1 w-full max-w-full">
             <button
                 wire:click="drillDown(null)"
                 type="button"
@@ -64,7 +82,7 @@
             @endif
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-start">
             <span class="text-[11px] text-slate-500 font-mono">View:</span>
             <button
                 wire:click="$set('viewMode', 'hierarchy')"
@@ -106,8 +124,8 @@
     </div>
 
     <!-- Filters & Search Toolbar -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-wrap gap-3 items-center justify-between">
-        <div class="w-full sm:w-72">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        <div class="w-full lg:w-72">
             <input
                 wire:model.live.debounce.300ms="search"
                 type="text"
@@ -116,16 +134,16 @@
             />
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+        <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 text-xs w-full lg:w-auto">
             <div>
                 <x-searchable-select 
                     placeholder="All Campuses"
                     searchPlaceholder="Search campus..."
-                    containerClass="min-w-[170px]"
+                    containerClass="w-full sm:w-auto min-w-[170px]"
                 >
                     <select
                         wire:model.live="siteFilter"
-                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                        class="w-full sm:w-auto px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
                     >
                         <option value="">All Campuses</option>
                         @foreach($sites as $site)
@@ -139,11 +157,11 @@
                 <x-searchable-select 
                     placeholder="All Families"
                     searchPlaceholder="Search family..."
-                    containerClass="min-w-[130px]"
+                    containerClass="w-full sm:w-auto min-w-[130px]"
                 >
                     <select
                         wire:model.live="familyFilter"
-                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                        class="w-full sm:w-auto px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
                     >
                         <option value="all">All Families</option>
                         <option value="4">IPv4 Only</option>
@@ -156,11 +174,11 @@
                 <x-searchable-select 
                     placeholder="All Subnet Types"
                     searchPlaceholder="Search subnet type..."
-                    containerClass="min-w-[180px]"
+                    containerClass="w-full sm:w-auto min-w-[180px]"
                 >
                     <select
                         wire:model.live="typeFilter"
-                        class="px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        class="w-full sm:w-auto px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
                     >
                         <option value="all">All Subnet Types</option>
                         @foreach($subnetTypes as $type)
@@ -213,17 +231,31 @@
 
     <!-- Create / Edit Subnet Modal -->
     @if($showSubnetModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-xl w-full p-6 space-y-4">
+        <div wire:key="subnet-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-xl w-full p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto my-auto">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                     <h3 class="text-sm font-bold text-slate-900 dark:text-white">
                         {{ $isEditing ? 'Edit Subnet' : ($subnet_parent_id ? 'Add Child Subnet' : 'Create Root Subnet') }}
                     </h3>
-                    <button wire:click="$set('showSubnetModal', false)" type="button" class="text-slate-400 hover:text-slate-600">✕</button>
+                    <button wire:click="closeSubnetModal" type="button" class="text-slate-400 hover:text-slate-600">✕</button>
                 </div>
 
                 <form wire:submit="saveSubnet" class="space-y-4 text-xs">
-                    <div class="grid grid-cols-2 gap-3">
+                    @if($errors->any())
+                        <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Please correct the errors below:</span>
+                            </div>
+                            <ul class="list-disc list-inside pl-1 text-[11px] space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Parent Subnet</label>
                             <x-searchable-select 
@@ -240,6 +272,7 @@
                                     @endforeach
                                 </select>
                             </x-searchable-select>
+                            @error('subnet_parent_id') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
@@ -257,10 +290,11 @@
                                     @endforeach
                                 </select>
                             </x-searchable-select>
+                            @error('subnet_type') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <div class="flex items-center justify-between mb-1">
                                 <label class="font-medium text-slate-700 dark:text-slate-300">CIDR Prefix *</label>
@@ -296,7 +330,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <div class="flex items-center justify-between mb-1">
                                 <label class="font-medium text-slate-700 dark:text-slate-300">Subnet Mask</label>
@@ -326,7 +360,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Campus / Facility Site</label>
                             <x-searchable-select 
@@ -343,6 +377,7 @@
                                     @endforeach
                                 </select>
                             </x-searchable-select>
+                            @error('subnet_site_id') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
@@ -361,10 +396,11 @@
                                     @endforeach
                                 </select>
                             </x-searchable-select>
+                            @error('subnet_vlan_id') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Lifecycle Status *</label>
                             <x-searchable-select 
@@ -381,6 +417,7 @@
                                     <option value="retired">Retired</option>
                                 </select>
                             </x-searchable-select>
+                            @error('subnet_status') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                         </div>
 
                         <div>
@@ -403,15 +440,8 @@
                         ></textarea>
                     </div>
 
-                    <div class="flex items-center gap-2 pt-1">
-                        <label class="flex items-center text-slate-700 dark:text-slate-300 cursor-pointer">
-                            <input wire:model="subnet_allocation_enabled" type="checkbox" class="w-4 h-4 rounded text-emerald-600" />
-                            <span class="ml-2 font-medium">Enable IP address allocation in this subnet</span>
-                        </label>
-                    </div>
-
                     <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-                        <button wire:click="$set('showSubnetModal', false)" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                        <button wire:click="closeSubnetModal" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                             Cancel
                         </button>
                         <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">
@@ -425,8 +455,8 @@
 
     <!-- CIDR Calculator Modal -->
     @if($showCalculatorModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-xl w-full p-6 space-y-4">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-xl w-full p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto my-auto">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                     <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
@@ -438,7 +468,7 @@
                 <div class="space-y-4 text-xs">
                     <div>
                         <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Enter IPv4 or IPv6 CIDR:</label>
-                        <div class="flex gap-2">
+                        <div class="flex flex-col sm:flex-row gap-2">
                             <input
                                 wire:model="calcInputCidr"
                                 wire:keydown.enter="runCalculation"
@@ -449,7 +479,7 @@
                             <button
                                 wire:click="runCalculation"
                                 type="button"
-                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold"
+                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold w-full sm:w-auto"
                             >
                                 Calculate
                             </button>
@@ -510,8 +540,8 @@
 
     <!-- Split Preview Modal -->
     @if($showSplitModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-6 space-y-4">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-lg w-full p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto my-auto">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                     <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
@@ -523,14 +553,14 @@
                 <div class="space-y-4 text-xs">
                     <div>
                         <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Target Split Prefix Length (e.g. /26, /27):</label>
-                        <div class="flex gap-2">
+                        <div class="flex flex-col sm:flex-row gap-2">
                             <input
                                 wire:model.live.debounce.300ms="splitTargetPrefix"
                                 wire:change="generateSplitPreview"
                                 type="number"
                                 min="1"
                                 max="128"
-                                class="w-24 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-slate-900 dark:text-slate-100"
+                                class="w-full sm:w-24 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-slate-900 dark:text-slate-100"
                             />
                             <span class="text-slate-500 self-center">Produces {{ count($splitPreviewList) }} child segments</span>
                         </div>
@@ -560,8 +590,8 @@
 
     <!-- Delete Confirmation Modal -->
     @if($showDeleteModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-5 space-y-4 text-xs">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-4 sm:p-5 space-y-4 text-xs max-h-[92vh] overflow-y-auto my-auto">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 text-rose-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                     <span>Delete Subnet</span>

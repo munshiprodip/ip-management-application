@@ -22,26 +22,17 @@ class IpPoolPolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-        ], true);
+        return $user->canManageNetwork();
     }
 
     public function update(User $user, IpPool $pool): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-        ], true);
+        return $user->canManageNetwork();
     }
 
     public function delete(User $user, IpPool $pool): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-        ], true);
+        return $user->canManageNetwork();
     }
 }
 

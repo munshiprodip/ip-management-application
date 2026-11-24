@@ -13,3 +13,33 @@
 [x-cloak] {
     display: none !important;
 }
+
+/* Mobile Touch & Scroll Performance Optimizations */
+html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+}
+
+button, a, input, select, textarea {
+    touch-action: manipulation;
+}
+
+.overflow-x-auto, .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Discreet Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.7);
+}

@@ -1,5 +1,5 @@
 <tr class="{{ $depth > 0 ? 'bg-slate-50/70 dark:bg-slate-900/40 border-l-2 border-l-emerald-500/60' : '' }} hover:bg-emerald-50/30 dark:hover:bg-slate-700/30 transition">
-    <td class="py-3 px-4 font-mono text-slate-900 dark:text-white whitespace-nowrap" style="padding-left: {{ ($depth * 28) + 16 }}px;">
+    <td class="py-3 px-4 font-mono text-slate-900 dark:text-white whitespace-nowrap" style="padding-left: clamp(12px, {{ ($depth * 14) + 12 }}px, 52px);">
         <div class="flex items-center gap-1.5">
             @if($depth > 0)
                 <span class="text-slate-400 dark:text-slate-500 font-mono text-xs select-none mr-1 inline-flex items-center">
@@ -102,6 +102,19 @@
                     </svg>
                     <span>Explore IPs</span>
                 </a>
+
+                @if($subnet->ip_version === 4)
+                    <a
+                        href="{{ route('scanner.index', ['subnet' => $subnet->id]) }}"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[11px] font-semibold transition shadow-2xs"
+                        title="Scan {{ $subnet->cidr }} with Network IP Scanner"
+                    >
+                        <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                        </svg>
+                        <span>Scan</span>
+                    </a>
+                @endif
             @endif
 
             @if($subnet->children_count > 0)

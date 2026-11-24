@@ -13,9 +13,12 @@ use App\Domain\AddressSpace\Enums\IpAllocationStatus;
 use App\Domain\AddressSpace\Enums\IpClassification;
 use App\Domain\AddressSpace\ValueObjects\IpAddress as IpAddressVO;
 use App\Models\IpAddress;
+use App\Models\ScanResult;
 use App\Models\Subnet;
 use App\Services\AddressSpace\CandidateWindowGenerator;
 use App\Services\AddressSpace\IpAllocationService;
+use App\Services\Network\ArpLookupService;
+use App\Services\Network\PingService;
 use App\Services\SiteContext;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -36,6 +39,9 @@ class Index extends Component
     #[Url(as: 'host_type')]
     public string $hostTypeFilter = 'all';
     public string $search = '';
+
+    // ICMP Echo Ping Telemetry Results
+    public array $pingResults = [];
 
     // Allocate Modal
     public bool $showAllocateModal = false;
@@ -131,6 +137,49 @@ class Index extends Component
         $this->updatedSelectedSubnetId($subnetId);
     }
 
+    public function updatedStatusFilter(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function updatedHostTypeFilter(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->currentPage = 1;
+    }
+
+    public function closeAllocateModal(): void
+    {
+        $this->showAllocateModal = false;
+        $this->resetValidation();
+        $this->reset(['alloc_ip', 'alloc_hostname', 'alloc_mac_address', 'alloc_assigned_to', 'alloc_description']);
+    }
+
+    public function closeReleaseModal(): void
+    {
+        $this->showReleaseModal = false;
+        $this->resetValidation();
+        $this->reset(['releaseIpId', 'release_reason', 'release_quarantine_days']);
+    }
+
+    public function closeReserveModal(): void
+    {
+        $this->showReserveModal = false;
+        $this->resetValidation();
+        $this->reset(['reserve_ip', 'reserve_reason', 'reserve_expires_at']);
+    }
+
+    public function closeEditModal(): void
+    {
+        $this->showEditModal = false;
+        $this->resetValidation();
+        $this->reset(['editIpId', 'edit_ip_text', 'edit_assigned_to', 'edit_host_type', 'edit_hostname', 'edit_mac_address', 'edit_description']);
+    }
+
     public function nextPage(): void
     {
         $this->currentPage++;
@@ -159,6 +208,39 @@ class Index extends Component
             $this->suggestNextFree();
         }
 
+        // Auto-fill discovered hostname and MAC if available from network scanning observations
+        if (! empty($this->alloc_ip)) {
+            $recentScan = ScanResult::where('ip_address', $this->alloc_ip)
+                ->where(function ($q) {
+                    $q->whereNotNull('discovered_hostname')->orWhereNotNull('discovered_mac');
+                })
+                ->latest('id')
+                ->first();
+
+            if ($recentScan) {
+                $this->alloc_hostname = $recentScan->discovered_hostname ?? '';
+                $this->alloc_mac_address = $recentScan->discovered_mac ?? '';
+            }
+
+            if (empty($this->alloc_hostname) && filter_var($this->alloc_ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $resolved = @gethostbyaddr($this->alloc_ip);
+                if ($resolved && $resolved !== $this->alloc_ip) {
+                    $this->alloc_hostname = $resolved;
+                }
+            }
+
+            if (empty($this->alloc_mac_address) && filter_var($this->alloc_ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $mac = app(ArpLookupService::class)->lookupMac($this->alloc_ip);
+                if ($mac) {
+                    $this->alloc_mac_address = $mac;
+                }
+            }
+
+            if (! empty($this->alloc_hostname) && empty($this->alloc_assigned_to)) {
+                $this->alloc_assigned_to = $this->alloc_hostname;
+            }
+        }
+
         $this->showAllocateModal = true;
     }
 
@@ -178,8 +260,10 @@ class Index extends Component
         }
     }
 
-    public function saveAllocation(AllocateIpAction $action): void
+    public function saveAllocation(?AllocateIpAction $action = null): void
     {
+        $action ??= app(AllocateIpAction::class);
+
         $this->validate([
             'alloc_ip' => 'required|string',
             'alloc_classification' => 'required|string',
@@ -198,10 +282,17 @@ class Index extends Component
                 'description' => !empty($this->alloc_description) ? $this->alloc_description : null,
             ], auth()->user());
 
-            session()->flash('success', "IP address {$this->alloc_ip} assigned successfully.");
+            $msg = "IP address {$this->alloc_ip} assigned successfully.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             $this->showAllocateModal = false;
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            $this->setErrorBag($ve->validator->getMessageBag());
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Validation failed: ' . $ve->getMessage()]);
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
+            $this->addError('alloc_ip', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
@@ -215,17 +306,21 @@ class Index extends Component
         $this->showReleaseModal = true;
     }
 
-    public function confirmRelease(ReleaseIpAction $action): void
+    public function confirmRelease(?ReleaseIpAction $action = null): void
     {
+        $action ??= app(ReleaseIpAction::class);
         $ip = IpAddress::findOrFail($this->releaseIpId);
 
         try {
             $action->execute($ip, $this->release_reason, $this->release_quarantine_days, auth()->user());
-            session()->flash('success', "IP address {$ip->address_text} released and quarantined.");
+            $msg = "IP address {$ip->address_text} released and quarantined.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             $this->showReleaseModal = false;
             $this->showDetailsDrawer = false;
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
@@ -237,8 +332,10 @@ class Index extends Component
         $this->showReserveModal = true;
     }
 
-    public function confirmReservation(ReserveIpAction $action): void
+    public function confirmReservation(?ReserveIpAction $action = null): void
     {
+        $action ??= app(ReserveIpAction::class);
+
         $this->validate([
             'reserve_ip' => 'required|string',
             'reserve_reason' => 'required|string|max:255',
@@ -252,10 +349,17 @@ class Index extends Component
                 'expires_at' => $this->reserve_expires_at,
             ], auth()->user());
 
-            session()->flash('success', "IP address {$this->reserve_ip} reserved.");
+            $msg = "IP address {$this->reserve_ip} reserved.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             $this->showReserveModal = false;
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            $this->setErrorBag($ve->validator->getMessageBag());
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Validation failed: ' . $ve->getMessage()]);
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
+            $this->addError('reserve_reason', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
@@ -309,80 +413,108 @@ class Index extends Component
 
         $hostType = !empty($this->edit_host_type) ? trim($this->edit_host_type) : null;
 
-        if ($record) {
-            $before = $record->toArray();
-            $record->update([
-                'assigned_to' => trim($this->edit_assigned_to),
-                'host_type' => $hostType,
-                'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
-                'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
-                'description' => $this->edit_description ? trim($this->edit_description) : null,
-            ]);
-
-            // Also update current active assignment record if exists
-            $assignment = $record->currentAssignment;
-            if ($assignment) {
-                $assignment->update([
+        try {
+            if ($record) {
+                $before = $record->toArray();
+                $record->update([
                     'assigned_to' => trim($this->edit_assigned_to),
                     'host_type' => $hostType,
                     'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
                     'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
+                    'description' => $this->edit_description ? trim($this->edit_description) : null,
                 ]);
+
+                // Also update current active assignment record if exists
+                $assignment = $record->currentAssignment;
+                if ($assignment) {
+                    $assignment->update([
+                        'assigned_to' => trim($this->edit_assigned_to),
+                        'host_type' => $hostType,
+                        'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
+                        'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
+                    ]);
+                }
+
+                \App\Models\AuditEvent::record(
+                    eventType: 'ip.assignment_updated',
+                    reason: "Updated assigned details for IP {$record->address_text}",
+                    subject: $record,
+                    before: $before,
+                    after: $record->fresh()->toArray()
+                );
+
+                $msg = "Assigned To details for IP {$this->edit_ip_text} updated successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
+            } else {
+                $allocateAction = app(\App\Actions\AddressSpace\AllocateIpAction::class);
+                $allocateAction->execute([
+                    'subnet_id' => $this->selectedSubnetId,
+                    'ip_address' => $this->edit_ip_text,
+                    'assigned_to' => trim($this->edit_assigned_to),
+                    'host_type' => $hostType,
+                    'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
+                    'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
+                    'description' => $this->edit_description ? trim($this->edit_description) : null,
+                ], auth()->user());
+
+                $msg = "IP {$this->edit_ip_text} assigned to '{$this->edit_assigned_to}' successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             }
 
-            \App\Models\AuditEvent::record(
-                eventType: 'ip.assignment_updated',
-                reason: "Updated assigned details for IP {$record->address_text}",
-                subject: $record,
-                before: $before,
-                after: $record->fresh()->toArray()
-            );
-
-            session()->flash('success', "Assigned To details for IP {$this->edit_ip_text} updated successfully.");
-        } else {
-            $allocateAction = app(\App\Actions\AddressSpace\AllocateIpAction::class);
-            $allocateAction->execute([
-                'subnet_id' => $this->selectedSubnetId,
-                'ip_address' => $this->edit_ip_text,
-                'assigned_to' => trim($this->edit_assigned_to),
-                'host_type' => $hostType,
-                'hostname' => $this->edit_hostname ? trim($this->edit_hostname) : null,
-                'mac_address' => $this->edit_mac_address ? strtoupper(trim($this->edit_mac_address)) : null,
-                'description' => $this->edit_description ? trim($this->edit_description) : null,
-            ], auth()->user());
-
-            session()->flash('success', "IP {$this->edit_ip_text} assigned to '{$this->edit_assigned_to}' successfully.");
+            $this->showEditModal = false;
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            $this->setErrorBag($ve->validator->getMessageBag());
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Validation failed: ' . $ve->getMessage()]);
+        } catch (\Exception $e) {
+            session()->flash('error', $e->getMessage());
+            $this->addError('edit_assigned_to', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
-
-        $this->showEditModal = false;
     }
 
-    public function unquarantineIp(string $ipText, UnquarantineIpAction $action): void
+    public function unquarantineIp(string $ipText, ?UnquarantineIpAction $action = null): void
     {
+        $action ??= app(UnquarantineIpAction::class);
+
         $ipVO = IpAddressVO::parse($ipText);
         $record = IpAddress::where('subnet_id', $this->selectedSubnetId)
             ->where('address_hex', $ipVO->toHex())
             ->first();
 
         if (! $record) {
-            session()->flash('error', "IP address record for {$ipText} not found.");
+            $msg = "IP address record for {$ipText} not found.";
+            session()->flash('error', $msg);
+            $this->dispatch('notify', ['type' => 'error', 'message' => $msg]);
             return;
         }
 
         try {
             $action->execute($record, 'Quarantine manually cleared by operator', auth()->user());
-            session()->flash('success', "IP address {$ipText} removed from quarantine and marked as unassigned / available.");
+            $msg = "IP address {$ipText} removed from quarantine and marked as unassigned / available.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             $this->showDetailsDrawer = false;
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
+    }
+
+    public function pingIp(string $ip, PingService $pingService): void
+    {
+        $result = $pingService->ping($ip, auth()->user());
+        $this->pingResults[$ip] = $result->toArray();
     }
 
     public function render()
     {
         $activeSiteId = app(SiteContext::class)->getActiveSiteId();
 
-        $subnetQuery = Subnet::where('subnet_type', 'assignable')->with('site');
+        $subnetQuery = Subnet::where('subnet_type', 'assignable')
+            ->where('allocation_enabled', true)
+            ->with('site');
         if ($activeSiteId) {
             $subnetQuery->where('site_id', $activeSiteId);
         }
@@ -392,7 +524,7 @@ class Index extends Component
         // If currently selected subnet exists, ensure it is included in options even if site differed
         if ($this->selectedSubnetId && !$subnets->contains('id', $this->selectedSubnetId)) {
             $currentSubnet = Subnet::with('site')->find($this->selectedSubnetId);
-            if ($currentSubnet) {
+            if ($currentSubnet && $currentSubnet->isAssignable() && $currentSubnet->allocation_enabled) {
                 $subnets->prepend($currentSubnet);
             }
         }
@@ -402,12 +534,17 @@ class Index extends Component
         }
 
         $selectedSubnet = $this->selectedSubnetId ? Subnet::with(['vlan', 'site', 'pools', 'exclusions'])->find($this->selectedSubnetId) : null;
+        if ($selectedSubnet && (! $selectedSubnet->isAssignable() || ! $selectedSubnet->allocation_enabled)) {
+            $selectedSubnet = $subnets->first();
+            $this->selectedSubnetId = $selectedSubnet?->id;
+        }
 
         $windowData = ['items' => [], 'total' => 0, 'per_page' => $this->perPage, 'current_page' => 1, 'last_page' => 1];
 
         if ($selectedSubnet) {
             $generator = app(CandidateWindowGenerator::class);
             $windowData = $generator->generateWindow($selectedSubnet, $this->currentPage, $this->perPage);
+            $this->currentPage = $windowData['current_page'];
 
             if ($this->statusFilter !== 'all') {
                 $filter = $this->statusFilter;

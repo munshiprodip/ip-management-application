@@ -37,7 +37,13 @@ class CreateSubnetAction
 
         $this->hierarchyService->validateHierarchy($prefix, $parentId);
 
-        return DB::transaction(function () use ($data, $prefix, $canonicalCidr, $parentId, $siteId) {
+        $subnetType = $data['subnet_type'] ?? SubnetType::ASSIGNABLE;
+        if (is_string($subnetType)) {
+            $subnetType = SubnetType::from($subnetType);
+        }
+        $allocationEnabled = ($subnetType === SubnetType::AGGREGATE) ? false : ($data['allocation_enabled'] ?? true);
+
+        return DB::transaction(function () use ($data, $prefix, $canonicalCidr, $parentId, $siteId, $subnetType, $allocationEnabled) {
             $subnet = Subnet::create([
                 'site_id' => $siteId,
                 'parent_id' => $parentId,
@@ -52,9 +58,9 @@ class CreateSubnetAction
                 'start_hex' => $prefix->startHex(),
                 'end_hex' => $prefix->endHex(),
                 'prefix_length' => $prefix->prefixLength(),
-                'subnet_type' => $data['subnet_type'] ?? SubnetType::ASSIGNABLE,
+                'subnet_type' => $subnetType,
                 'status' => $data['status'] ?? SubnetStatus::ACTIVE,
-                'allocation_enabled' => $data['allocation_enabled'] ?? true,
+                'allocation_enabled' => $allocationEnabled,
             ]);
 
             AuditEvent::record(

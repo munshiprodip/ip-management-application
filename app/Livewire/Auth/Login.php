@@ -80,6 +80,8 @@ class Login extends Component
             $user
         );
 
+        session()->flash('success', "Welcome back, {$user->name}. Signed in as {$user->role->value}.");
+
         $this->redirectIntended(route('dashboard'));
     }
 

@@ -20,10 +20,10 @@ class DeleteHostTypeAction
             ]);
         }
 
-        $allocatedCount = IpAddress::where('host_type', $hostType->slug)->count();
+        $allocatedCount = $hostType->assignedIpAddresses()->count();
         if ($allocatedCount > 0) {
             throw ValidationException::withMessages([
-                'host_type' => "Cannot delete '{$hostType->name}' because {$allocatedCount} IP address allocation(s) are currently categorized with this host type. Reassign or decommission those addresses first, or deactivate this type.",
+                'host_type' => "Cannot delete '{$hostType->name}' because {$allocatedCount} active assigned IP address(es) are currently categorized with this host type. Reassign or decommission those addresses first, or deactivate this type.",
             ]);
         }
 

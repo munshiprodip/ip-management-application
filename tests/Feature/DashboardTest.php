@@ -84,4 +84,78 @@ class DashboardTest extends TestCase
         $response->assertDontSee('STREAMLINED IPAM CORE');
         $response->assertDontSee('v1.0.0');
     }
+
+    public function test_capacity_watchlist_excludes_aggregate_containers(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::SUPER_ADMIN,
+            'status' => 'active',
+        ]);
+
+        $subnetAction = app(CreateSubnetAction::class);
+
+        // Aggregate container
+        $aggregate = $subnetAction->execute([
+            'cidr' => '10.90.0.0/16',
+            'name' => 'Campus 90 Aggregate',
+            'subnet_type' => SubnetType::AGGREGATE,
+        ]);
+
+        // Assignable child
+        $child = $subnetAction->execute([
+            'parent_id' => $aggregate->id,
+            'cidr' => '10.90.1.0/24',
+            'name' => 'Campus 90 Child Subnet',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+            'is_allocation_enabled' => true,
+        ]);
+
+        $component = Livewire::actingAs($user)->test(\App\Livewire\Dashboard\Index::class);
+        $watchlist = $component->viewData('capacityWatchlist');
+
+        $watchlistCidrs = $watchlist->pluck('subnet.cidr')->all();
+        $this->assertContains('10.90.1.0/24', $watchlistCidrs);
+        $this->assertNotContains('10.90.0.0/16', $watchlistCidrs);
+    }
+
+    public function test_host_type_counts_only_assigned_ips_and_excludes_reserved_or_quarantined(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::SUPER_ADMIN,
+            'status' => 'active',
+        ]);
+
+        $subnetAction = app(CreateSubnetAction::class);
+        $subnet = $subnetAction->execute([
+            'cidr' => '10.95.1.0/24',
+            'name' => 'Host Type Test Subnet',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+            'is_allocation_enabled' => true,
+        ]);
+
+        $allocateAction = app(AllocateIpAction::class);
+        $reserveAction = app(\App\Actions\AddressSpace\ReserveIpAction::class);
+
+        // 1 assigned printer
+        $allocateAction->execute([
+            'subnet_id' => $subnet->id,
+            'ip_address' => '10.95.1.10',
+            'host_type' => 'printer',
+            'assigned_to' => 'Thermal Prescription Printer',
+        ]);
+
+        // 1 reserved IP (should NOT count as assigned printer)
+        $reserveAction->execute([
+            'subnet_id' => $subnet->id,
+            'ip_address' => '10.95.1.20',
+            'reason' => 'Reserved for future printer',
+        ]);
+
+        $component = Livewire::actingAs($user)->test(\App\Livewire\Dashboard\Index::class);
+        $hostTypeStats = $component->viewData('hostTypeStats');
+
+        $printerStat = $hostTypeStats->firstWhere('slug', 'printer');
+        $this->assertNotNull($printerStat);
+        $this->assertEquals(1, $printerStat['assignedCount']);
+    }
 }

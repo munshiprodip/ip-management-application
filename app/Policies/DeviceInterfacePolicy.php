@@ -22,28 +22,17 @@ class DeviceInterfacePolicy
 
     public function create(User $user): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-            UserRole::OPERATOR,
-        ], true);
+        return $user->canOperate();
     }
 
     public function update(User $user, DeviceInterface $interface): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-            UserRole::OPERATOR,
-        ], true);
+        return $user->canOperate();
     }
 
     public function delete(User $user, DeviceInterface $interface): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-        ], true);
+        return $user->canManageNetwork();
     }
 }
 

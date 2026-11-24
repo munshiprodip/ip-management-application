@@ -36,9 +36,15 @@ class HostType extends Model
         return $this->hasMany(IpAddress::class, 'host_type', 'slug');
     }
 
+    public function assignedIpAddresses(): HasMany
+    {
+        return $this->hasMany(IpAddress::class, 'host_type', 'slug')
+            ->where('allocation_status', \App\Domain\AddressSpace\Enums\IpAllocationStatus::ASSIGNED);
+    }
+
     public function allocatedCount(): int
     {
-        return $this->ipAddresses()->count();
+        return $this->assignedIpAddresses()->count();
     }
 
     public function badgeClasses(): string

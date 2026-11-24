@@ -1,24 +1,53 @@
 <div class="space-y-6">
+    <!-- Inline Flash Notifications (Direct Component Feedback) -->
+    @if (session('success'))
+        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs rounded-xl shadow-xs flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span class="font-medium">{{ session('success') }}</span>
+            </div>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="p-3 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-xl shadow-xs flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span class="font-medium">{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
+
     <!-- Header / Context Bar -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2 text-xs text-slate-500 font-mono mb-1">
                 <a href="{{ route('dashboard') }}" class="hover:text-emerald-600">KYAMCH IPAM</a>
                 <span>/</span>
                 <span class="text-slate-800 dark:text-slate-200 font-semibold">IP Explorer & Allocations</span>
             </div>
-            <h1 class="text-xl font-bold text-slate-900 dark:text-white">IP Address Explorer &amp; Allocations</h1>
+            <h1 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">IP Address Explorer &amp; Allocations</h1>
             <p class="text-xs text-slate-500 dark:text-slate-400">
                 Authoritative host IP address allocation, quarantine management, and virtual candidate window explorer.
             </p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            @if($selectedSubnet && $selectedSubnet->ip_version === 4)
+                <a
+                    href="{{ route('scanner.index', ['subnet' => $selectedSubnet->id]) }}"
+                    class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold shadow-xs transition"
+                    title="Scan selected subnet {{ $selectedSubnet->cidr }} with Network Scanner"
+                >
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
+                    <span>Scan Subnet</span>
+                </a>
+            @endif
+
             <button
                 wire:click="openAllocateModal()"
                 type="button"
                 @if(!$selectedSubnetId) disabled @endif
-                class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                class="w-full sm:w-auto justify-center inline-flex items-center gap-2 px-3.5 py-2.5 sm:py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Allocate IP Address
@@ -27,21 +56,21 @@
     </div>
 
     <!-- Subnet Selector & Status Filter Toolbar -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-wrap gap-3 items-center justify-between">
-        <div class="flex flex-wrap items-center gap-3">
-            <div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+        <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-auto">
+            <div class="w-full sm:w-auto">
                 <label class="block text-[11px] font-mono text-slate-500 uppercase mb-1">Target Subnet:</label>
                 <x-searchable-select 
                     placeholder="Select Target Subnet..."
                     searchPlaceholder="Search by CIDR or subnet name..."
-                    containerClass="min-w-[280px]"
+                    containerClass="w-full sm:min-w-[280px]"
                 >
                     <select
                         wire:model.live="selectedSubnetId"
-                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-semibold"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono font-semibold w-full"
                     >
                         @forelse($subnets as $sub)
-                            <option value="{{ $sub->id }}">{{ $sub->cidr }} — {{ $sub->name }}{{ $sub->site ? ' [' . $sub->site->code . ']' : '' }}</option>
+                            <option value="{{ $sub->id }}" @selected((int)$selectedSubnetId === (int)$sub->id)>{{ $sub->cidr }} — {{ $sub->name }}{{ $sub->site ? ' [' . $sub->site->code . ']' : '' }}</option>
                         @empty
                             <option value="">No assignable subnets available</option>
                         @endforelse
@@ -49,16 +78,16 @@
                 </x-searchable-select>
             </div>
 
-            <div>
+            <div class="w-full sm:w-auto">
                 <label class="block text-[11px] font-mono text-slate-500 uppercase mb-1">Status Filter:</label>
                 <x-searchable-select 
                     placeholder="All Address Candidates"
                     searchPlaceholder="Search candidate status..."
-                    containerClass="min-w-[190px]"
+                    containerClass="w-full sm:min-w-[190px]"
                 >
                     <select
                         wire:model.live="statusFilter"
-                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 w-full"
                     >
                         <option value="all">All Address Candidates</option>
                         <option value="unassigned">Available (Unassigned)</option>
@@ -69,16 +98,16 @@
                 </x-searchable-select>
             </div>
 
-            <div>
+            <div class="w-full sm:w-auto">
                 <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Host Type Filter:</label>
                 <x-searchable-select 
                     placeholder="All Host Types"
                     searchPlaceholder="Search host type..."
-                    containerClass="min-w-[190px]"
+                    containerClass="w-full sm:min-w-[190px]"
                 >
                     <select
                         wire:model.live="hostTypeFilter"
-                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium"
+                        class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-medium w-full"
                     >
                         <option value="all">All Host Types</option>
                         @foreach($hostTypes as $ht)
@@ -90,24 +119,26 @@
         </div>
 
         @if($selectedSubnet)
-            <div class="flex flex-wrap items-center gap-2.5 text-xs font-mono">
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 text-xs font-mono w-full lg:w-auto pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-700/60">
                 <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 shadow-2xs">
-                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold uppercase text-[10px]">Subnet Mask:</span>
-                    <span class="font-bold text-slate-900 dark:text-white">{{ $selectedSubnet->netmask() }}</span>
+                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold uppercase text-[10px] hidden sm:inline">Subnet Mask:</span>
+                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold uppercase text-[10px] sm:hidden">Mask:</span>
+                    <span class="font-bold text-slate-900 dark:text-white truncate">{{ $selectedSubnet->netmask() }}</span>
                 </div>
                 <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 shadow-2xs">
-                    <span class="text-blue-700 dark:text-blue-400 font-semibold uppercase text-[10px]">Default Gateway:</span>
-                    <span class="font-bold text-slate-900 dark:text-white">{{ $selectedSubnet->defaultGateway() }}</span>
+                    <span class="text-blue-700 dark:text-blue-400 font-semibold uppercase text-[10px] hidden sm:inline">Default Gateway:</span>
+                    <span class="text-blue-700 dark:text-blue-400 font-semibold uppercase text-[10px] sm:hidden">GW:</span>
+                    <span class="font-bold text-slate-900 dark:text-white truncate">{{ $selectedSubnet->defaultGateway() }}</span>
                 </div>
                 <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 shadow-2xs">
                     <span class="font-bold text-slate-900 dark:text-white">{{ $selectedSubnet->usableAddressesFormatted() }}</span>
-                    <span>Usable Hosts</span>
+                    <span class="truncate">Usable Hosts</span>
                 </div>
                 @if($selectedSubnet->vlan)
                     <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold shadow-2xs">
                         <span>VLAN {{ $selectedSubnet->vlan->vlan_id }}</span>
                         @if($selectedSubnet->vlan->name)
-                            <span class="text-[10px] font-normal text-indigo-500">({{ $selectedSubnet->vlan->name }})</span>
+                            <span class="text-[10px] font-normal text-indigo-500 truncate">({{ $selectedSubnet->vlan->name }})</span>
                         @endif
                     </div>
                 @endif
@@ -137,9 +168,33 @@
                         @endphp
                         <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition">
                             <td class="py-3 px-4 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                                <span class="px-2 py-0.5 rounded {{ $statusStr === 'assigned' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : ($statusStr === 'reserved' ? 'bg-amber-50 text-amber-700' : ($statusStr === 'quarantined' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200')) }}">
-                                    {{ $item['ip_text'] }}
-                                </span>
+                                <div class="inline-flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded {{ $statusStr === 'assigned' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : ($statusStr === 'reserved' ? 'bg-amber-50 text-amber-700' : ($statusStr === 'quarantined' ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200')) }}">
+                                        {{ $item['ip_text'] }}
+                                    </span>
+                                    @if(isset($pingResults[$item['ip_text']]))
+                                        @php $res = $pingResults[$item['ip_text']]; @endphp
+                                        @if($res['status'] === 'reachable')
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs" title="Reachable with latency {{ $res['latency'] ?? '' }} at {{ $res['checked_at'] }}">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                <span>{{ $res['latency'] ?? 'Reachable' }}</span>
+                                                <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-normal">({{ $res['checked_at'] }})</span>
+                                            </span>
+                                        @elseif($res['status'] === 'no_reply')
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs" title="No reply / timed out at {{ $res['checked_at'] }}">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                                <span>No Reply</span>
+                                                <span class="text-[9px] text-rose-600 dark:text-rose-400 font-normal">({{ $res['checked_at'] }})</span>
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 shadow-2xs" title="{{ $res['message'] ?? 'Error' }} at {{ $res['checked_at'] }}">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                                <span>Error</span>
+                                                <span class="text-[9px] text-slate-500 dark:text-slate-400 font-normal">({{ $res['checked_at'] }})</span>
+                                            </span>
+                                        @endif
+                                    @endif
+                                </div>
                             </td>
                             <td class="py-3 px-4">
                                 @if($statusStr === 'assigned')
@@ -202,6 +257,25 @@
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-1.5">
+                                    <button
+                                        wire:click="pingIp('{{ $item['ip_text'] }}')"
+                                        wire:loading.attr="disabled"
+                                        wire:target="pingIp('{{ $item['ip_text'] }}')"
+                                        type="button"
+                                        class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 text-[11px] font-semibold transition disabled:opacity-50 cursor-pointer"
+                                        title="ICMP echo ping to {{ $item['ip_text'] }}"
+                                    >
+                                        <svg wire:loading wire:target="pingIp('{{ $item['ip_text'] }}')" class="animate-spin w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <svg wire:loading.remove wire:target="pingIp('{{ $item['ip_text'] }}')" class="w-3 h-3 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                        </svg>
+                                        <span wire:loading.remove wire:target="pingIp('{{ $item['ip_text'] }}')">Ping</span>
+                                        <span wire:loading wire:target="pingIp('{{ $item['ip_text'] }}')">Pinging...</span>
+                                    </button>
+
                                     @if($statusStr === 'unassigned')
                                         <button
                                             wire:click="openAllocateModal('{{ $item['ip_text'] }}')"
@@ -289,16 +363,16 @@
 
         <!-- Pagination Bar -->
         @if($windowData['total'] > 0)
-            <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between text-xs font-mono">
-                <span class="text-slate-500">
+            <div class="p-3.5 sm:p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono">
+                <span class="text-slate-500 text-center sm:text-left">
                     Showing page {{ $windowData['current_page'] }} of {{ $windowData['last_page'] }} (Total candidate addresses: {{ number_format($windowData['total']) }})
                 </span>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
                     <button
                         wire:click="previousPage"
                         type="button"
                         @if($currentPage <= 1) disabled @endif
-                        class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40"
+                        class="flex-1 sm:flex-initial px-3.5 py-2 sm:py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 text-center cursor-pointer transition hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                         &larr; Previous 50
                     </button>
@@ -306,7 +380,7 @@
                         wire:click="nextPage"
                         type="button"
                         @if($currentPage >= $windowData['last_page']) disabled @endif
-                        class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40"
+                        class="flex-1 sm:flex-initial px-3.5 py-2 sm:py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 text-center cursor-pointer transition hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                         Next 50 &rarr;
                     </button>
@@ -317,16 +391,30 @@
 
     <!-- Allocate Modal -->
     @if($showAllocateModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 space-y-4">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto my-auto">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                     <h3 class="text-sm font-bold text-slate-900 dark:text-white">
                         Allocate IP Address
                     </h3>
-                    <button wire:click="$set('showAllocateModal', false)" type="button" class="text-slate-400 hover:text-slate-600">✕</button>
+                    <button wire:click="closeAllocateModal" type="button" class="p-1 text-slate-400 hover:text-slate-600 rounded">✕</button>
                 </div>
 
                 <form wire:submit="saveAllocation" class="space-y-4 text-xs">
+                    @if($errors->any())
+                        <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Please correct the errors below:</span>
+                            </div>
+                            <ul class="list-disc list-inside pl-1 text-[11px] space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="font-medium text-slate-700 dark:text-slate-300">Target IP Address *</label>
@@ -437,8 +525,8 @@
 
     <!-- Release Modal -->
     @if($showReleaseModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-5 space-y-4 text-xs">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-4 sm:p-5 space-y-4 text-xs max-h-[92vh] overflow-y-auto my-auto">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 text-rose-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                     <span>Release IP Address</span>
@@ -481,12 +569,20 @@
 
     <!-- Reserve Modal -->
     @if($showReserveModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-5 space-y-4 text-xs">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-4 sm:p-5 space-y-4 text-xs max-h-[92vh] overflow-y-auto my-auto">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 text-amber-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                     <span>Reserve IP Address: {{ $reserve_ip }}</span>
                 </h3>
+
+                @if($errors->any())
+                    <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+                        <ul class="list-disc list-inside pl-1 text-[11px] space-y-0.5">
+                            @foreach($errors->all() as $err) <li>{{ $err }}</li> @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <div class="space-y-3">
                     <div>
@@ -496,6 +592,7 @@
                             rows="2"
                             class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
                         ></textarea>
+                        @error('reserve_reason') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
@@ -523,7 +620,7 @@
     <!-- Details Slide-over Drawer -->
     @if($showDetailsDrawer && $detailIp)
         <div class="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-xs flex justify-end">
-            <div class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl p-6 overflow-y-auto space-y-5 text-xs">
+            <div class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl p-4 sm:p-6 overflow-y-auto space-y-5 text-xs">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                     <div>
                         <span class="text-[11px] font-mono text-slate-400">IP ADDRESS RECORD</span>
@@ -636,8 +733,8 @@
 
     <!-- Edit Assignment Modal -->
     @if($showEditModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-6 space-y-4">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto my-auto">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
                     <div>
                         <h3 class="text-sm font-bold text-slate-900 dark:text-white">Edit IP Assignment Details</h3>
@@ -647,6 +744,20 @@
                 </div>
 
                 <form wire:submit="saveAssignmentEdit" class="space-y-4 text-xs">
+                    @if($errors->any())
+                        <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Please correct the errors below:</span>
+                            </div>
+                            <ul class="list-disc list-inside pl-1 text-[11px] space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div>
                         <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned To (Device / User / Bed / Station) *</label>
                         <input
@@ -658,7 +769,7 @@
                         @error('edit_assigned_to') <span class="text-rose-500 text-[11px] block mt-1">{{ $message }}</span> @enderror
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Host Type</label>
                             <x-searchable-select 

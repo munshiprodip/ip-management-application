@@ -22,36 +22,21 @@ class IpAddressPolicy
 
     public function allocate(User $user): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-            UserRole::OPERATOR,
-        ], true);
+        return $user->canOperate();
     }
 
     public function release(User $user, ?IpAddress $ip = null): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-            UserRole::OPERATOR,
-        ], true);
+        return $user->canOperate();
     }
 
     public function transfer(User $user, ?IpAddress $ip = null): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-        ], true);
+        return $user->canManageNetwork();
     }
 
     public function reserve(User $user): bool
     {
-        return in_array($user->role, [
-            UserRole::SUPER_ADMIN,
-            UserRole::NETWORK_ADMIN,
-            UserRole::OPERATOR,
-        ], true);
+        return $user->canOperate();
     }
 }

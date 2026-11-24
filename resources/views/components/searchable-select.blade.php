@@ -5,7 +5,7 @@
     'containerClass' => 'w-full',
 ])
 
-<div x-data="searchableSelect({ placeholder: @js($placeholder) })" 
+<div x-data="searchableSelect({ placeholder: @js($placeholder), wire: (typeof $wire !== 'undefined' ? $wire : null) })" 
      @keydown="onKeyDown($event)"
      class="relative inline-block text-xs {{ $containerClass }}">
     
@@ -32,7 +32,7 @@
     <div x-show="open" 
          x-cloak
          @click.outside="close()" 
-         class="absolute z-50 mt-1 w-full min-w-[220px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden text-xs">
+         class="absolute z-50 mt-1 w-full min-w-[200px] sm:min-w-[220px] max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden text-xs left-0">
         
         <!-- Search Input with Auto-focus -->
         <div class="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60">
@@ -62,7 +62,33 @@
         <div class="max-h-60 overflow-y-auto py-1 divide-y divide-slate-50 dark:divide-slate-800/40">
             <template x-for="(opt, idx) in filteredOptions" :key="opt.value + '_' + idx">
                 <button type="button" 
-                        @click="selectOption(opt.value)"
+                        @click="selectOption(opt.value);
+                                if (typeof $wire !== 'undefined' && $wire) {
+                                    const sel = $el.closest('[x-data]').querySelector('select');
+                                    if (sel) {
+                                        const wm = sel.getAttribute('wire:model.live') || sel.getAttribute('wire:model');
+                                        if (wm) {
+                                            const num = Number(opt.value);
+                                            const val = (!isNaN(num) && String(num) === String(opt.value).trim()) ? num : opt.value;
+                                            $wire.$set(wm, val, true);
+                                            if (wm === 'selectedSubnetId') {
+                                                try {
+                                                    const u = new URL(window.location.href);
+                                                    if (val) { u.searchParams.set('subnet', val); } else { u.searchParams.delete('subnet'); }
+                                                    window.history.replaceState({}, '', u);
+                                                } catch(e) {}
+                                            }
+                                        }
+                                        const wc = sel.getAttribute('wire:change');
+                                        if (wc) {
+                                            const m = wc.replace(/\(.*\)/, '').trim();
+                                            if (m && typeof $wire[m] === 'function') {
+                                                const num = Number(opt.value);
+                                                $wire[m]((!isNaN(num) && String(num) === String(opt.value).trim()) ? num : opt.value);
+                                            }
+                                        }
+                                    }
+                                }"
                         :disabled="opt.disabled"
                         :class="{
                             'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 font-semibold': opt.value == selectedValue,
@@ -70,7 +96,7 @@
                             'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50': opt.value != selectedValue && highlightIndex !== idx,
                             'opacity-50 cursor-not-allowed': opt.disabled
                         }"
-                        class="w-full px-3 py-2 text-left flex items-center justify-between gap-2 transition-colors cursor-pointer">
+                        class="w-full px-3 py-2.5 sm:py-2 text-left flex items-center justify-between gap-2 transition-colors cursor-pointer">
                     <span class="truncate" x-text="opt.label"></span>
                     <svg x-show="opt.value == selectedValue" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />

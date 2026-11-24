@@ -142,4 +142,27 @@ class VlanManagementTest extends TestCase
 
         $this->assertDatabaseHas('vlans', ['vlan_id' => 55, 'name' => 'Pharmacy Dispensing Network']);
     }
+
+    public function test_cannot_delete_vlan_with_attached_subnets(): void
+    {
+        $vlanAction = app(CreateVlanAction::class);
+        $vlan = $vlanAction->execute([
+            'vlan_id' => 77,
+            'name' => 'Cath Lab VLAN',
+        ]);
+
+        $subnetAction = app(\App\Actions\AddressSpace\CreateSubnetAction::class);
+        $subnetAction->execute([
+            'name' => 'Cath Lab Subnet',
+            'cidr' => '10.88.1.0/24',
+            'vlan_id' => $vlan->id,
+        ]);
+
+        $deleteAction = app(DeleteVlanAction::class);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('because it is currently attached to');
+
+        $deleteAction->execute($vlan);
+    }
 }

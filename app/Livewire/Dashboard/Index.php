@@ -83,17 +83,23 @@ class Index extends Component
             ];
         });
 
-        // Subnet Capacity Watchlist (Top 5 utilized subnets)
-        $subnets = (clone $subnetQuery)->with('vlan')->take(50)->get();
+        // Subnet Capacity Watchlist (Top 5 utilized assignable subnets)
+        $subnets = (clone $subnetQuery)
+            ->where('subnet_type', 'assignable')
+            ->where('allocation_enabled', true)
+            ->with('vlan')
+            ->take(50)
+            ->get();
+
         $capacityWatchlist = $subnets->map(function ($subnet) {
-            $total = (int) (string) $subnet->totalAddresses();
-            $allocated = $subnet->allocatedCount();
-            $utilization = $total > 0 ? round(($allocated / $total) * 100, 1) : 0.0;
+            $total = (int) (string) $subnet->usableAddresses();
+            $assigned = $subnet->assignedCount();
+            $utilization = $total > 0 ? round(($assigned / $total) * 100, 1) : 0.0;
 
             return [
                 'subnet' => $subnet,
                 'total' => $total,
-                'allocated' => $allocated,
+                'allocated' => $assigned,
                 'utilization' => $utilization,
             ];
         })->sortByDesc('utilization')->take(5);

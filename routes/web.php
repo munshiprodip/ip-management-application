@@ -38,6 +38,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/subnets', SubnetsIndex::class)->name('subnets.index');
     Route::get('/vlans', VlansIndex::class)->name('vlans.index');
     Route::get('/ip-addresses', IPAddressesIndex::class)->name('ip-addresses.index');
+    Route::get('/scanner', \App\Livewire\Scanner\Index::class)->name('scanner.index');
     Route::get('/sites', \App\Livewire\Sites\Index::class)->name('sites.index');
     Route::get('/host-types', \App\Livewire\HostTypes\Index::class)->name('host-types.index');
+    Route::get('/users', \App\Livewire\Users\Index::class)->middleware('can:manage-users')->name('users.index');
+    Route::get('/roles', \App\Livewire\Roles\Index::class)->middleware('can:manage-roles')->name('roles.index');
 });

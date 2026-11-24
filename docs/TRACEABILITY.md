@@ -1,8 +1,8 @@
 # KYAMCH Smart IPAM — Requirements & Code Traceability Matrix
 
 > **Document ID:** KYAMCH-IPAM-TRACE-001  
-> **Status:** Version 2.7.0 Core Architecture with Dynamic Top Subnet Context Bar & Streamlined IP Explorer  
-> **Updated:** 2026-11-22  
+> **Status:** Version 3.4.0 Network IP Scanner & Discovery Integration  
+> **Updated:** 2026-11-23  
 
 This matrix maps core functional requirements and active modules of the streamlined KYAMCH Smart IPAM application to database tables, domain services, Livewire UI components, and automated test coverage.
 
@@ -12,13 +12,14 @@ This matrix maps core functional requirements and active modules of the streamli
 
 | Module ID | Module Name | Core Entities / Tables | UI Components / Routes | Domain Services / Actions | Automated Tests | Architecture Status |
 |---|---|---|---|---|---|---|
-| **M00** | **Baseline & Enterprise Shell** | `users`, `audit_events`, `sessions` | `/login`, `/dashboard`, `AppLayout`, `SearchableSelect` | `AuditEvent::record()`, Auth Guards, `searchableSelect` Alpine component | `AuthenticationTest`, `EnterpriseShellTest`, `SafetyFlagsTest`, `AuditLogTest`, `UserRoleTest`, `DashboardTest` | **ACTIVE** |
+| **M00** | **Baseline & Enterprise Shell** | `users`, `audit_events`, `sessions` | `/login`, `/dashboard`, `AppLayout`, `SearchableSelect`, Alpine Toast System | `AuditEvent::record()`, Auth Guards, `searchableSelect` Alpine component, Universal `@notify` event handler | `AuthenticationTest`, `EnterpriseShellTest`, `SafetyFlagsTest`, `AuditLogTest`, `UserRoleTest`, `DashboardTest`, `NotificationFeedbackTest` | **ACTIVE** |
 | **M01** | **Top-Level Campus / Site Segregation** | `sites` | Top Bar Switcher, `/sites`, `Sites\Index`, `Components\CampusSwitcher` | `SiteContext`, `CreateSiteAction`, `UpdateSiteAction`, `DeleteSiteAction` | `SiteManagementTest` | **ACTIVE** |
 | **M02** | **802.1Q VLAN Management** | `vlans` | `/vlans`, `Vlans\Index` | `CreateVlanAction`, `UpdateVlanAction`, `DeleteVlanAction` | `VlanManagementTest` | **ACTIVE** |
 | **M03** | **Subnets & CIDR Hierarchy** | `subnets` | `/subnets`, `Subnets\Index`, `_subnet-row` | `IpPrefix`, `IpAddress`, `SubnetHierarchyService`, `CreateSubnetAction`, `UpdateSubnetAction`, `DeleteSubnetAction` | `IpAddressTest`, `IpPrefixTest`, `SubnetHierarchyTest`, `SubnetManagementTest` | **ACTIVE** |
 | **M04** | **Address Pools & Exclusions** | `ip_pools`, `ip_exclusions` | `/ip-addresses`, `IPAddresses\Index` | `AllocateIpAction` (Pool & exclusion validation) | `IpAllocationTest` | **ACTIVE** |
-| **M05** | **IP Address Explorer & Allocations** | `ip_addresses`, `ip_assignments`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator`, `AllocateIpAction`, `ReleaseIpAction`, `ReserveIpAction`, `UnquarantineIpAction` | `IpAllocationTest`, `IpCandidateWindowTest`, `LivewireIpExplorerTest` | **ACTIVE** |
+| **M05** | **IP Address Explorer & Allocations** | `ip_addresses`, `ip_assignments`, `ip_reservations` | `/ip-addresses`, `IPAddresses\Index` | `IpAllocationService`, `CandidateWindowGenerator`, `PingService`, `AllocateIpAction`, `ReleaseIpAction`, `ReserveIpAction`, `UnquarantineIpAction` | `IpAllocationTest`, `IpCandidateWindowTest`, `LivewireIpExplorerTest`, `PingServiceTest` | **ACTIVE** |
 | **M14** | **Host Types Management** | `host_types` | `/host-types`, `HostTypes\Index` | `CreateHostTypeAction`, `UpdateHostTypeAction`, `DeleteHostTypeAction` | `HostTypeManagementTest` | **ACTIVE** |
+| **M15** | **Network IP Scanner** | `scan_jobs`, `scan_results` | `/scanner`, `Scanner\Index` | `NetworkScanService`, `ArpLookupService`, `ScanSubnetJob`, `PingService` | `NetworkScannerTest` | **ACTIVE** |
 
 ---
 

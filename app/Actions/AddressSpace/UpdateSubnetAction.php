@@ -10,6 +10,7 @@ use App\Models\AuditEvent;
 use App\Models\Subnet;
 use App\Services\AddressSpace\SubnetHierarchyService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class UpdateSubnetAction
 {
@@ -26,17 +27,37 @@ class UpdateSubnetAction
             ? (!empty($data['parent_id']) ? (int) $data['parent_id'] : null)
             : $subnet->parent_id;
 
-        if ($parentId !== $subnet->parent_id && $parentId !== null) {
-            $this->hierarchyService->validateNoCycle($subnet, $parentId);
+        if ($parentId !== $subnet->parent_id) {
+            if ($parentId !== null) {
+                $this->hierarchyService->validateNoCycle($subnet, $parentId);
+            }
             $this->hierarchyService->validateHierarchy($subnet->toIpPrefix(), $parentId, $subnet->id);
         }
 
-        return DB::transaction(function () use ($subnet, $data, $parentId) {
+        $newType = isset($data['subnet_type'])
+            ? ($data['subnet_type'] instanceof SubnetType ? $data['subnet_type'] : SubnetType::from($data['subnet_type']))
+            : $subnet->subnet_type;
+
+        if ($subnet->children()->exists() && $newType !== SubnetType::AGGREGATE) {
+            throw ValidationException::withMessages([
+                'subnet_type' => "Subnet {$subnet->cidr} has child subnets and must remain an Aggregate Container.",
+            ]);
+        }
+
+        if ($subnet->ipAddresses()->where('allocation_status', 'assigned')->exists() && $newType === SubnetType::AGGREGATE) {
+            throw ValidationException::withMessages([
+                'subnet_type' => "Subnet {$subnet->cidr} has active assigned IP addresses and cannot be converted to an Aggregate Container.",
+            ]);
+        }
+
+        return DB::transaction(function () use ($subnet, $data, $parentId, $newType) {
             $before = $subnet->toArray();
 
             $updatePayload = array_merge($data, [
                 'parent_id' => $parentId,
                 'vlan_id' => array_key_exists('vlan_id', $data) && !empty($data['vlan_id']) ? (int) $data['vlan_id'] : null,
+                'subnet_type' => $newType,
+                'allocation_enabled' => ($newType === SubnetType::AGGREGATE) ? false : ($data['allocation_enabled'] ?? $subnet->allocation_enabled),
             ]);
 
             if (array_key_exists('gateway', $data)) {

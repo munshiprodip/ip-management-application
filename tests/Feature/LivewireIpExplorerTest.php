@@ -207,4 +207,62 @@ class LivewireIpExplorerTest extends TestCase
             ->assertSee('10.90.5.1')
             ->assertDontSee('10.50.1.15');
     }
+
+    public function test_ip_explorer_displays_ping_button_for_all_candidate_rows(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Pre-allocate one IP and reserve another IP to test all row types
+        $allocateAction = app(AllocateIpAction::class);
+        $allocateAction->execute([
+            'subnet_id' => $this->subnet->id,
+            'ip_address' => '10.50.1.10',
+            'assigned_to' => 'PACU Patient Monitor',
+        ]);
+
+        $reserveAction = app(\App\Actions\AddressSpace\ReserveIpAction::class);
+        $reserveAction->execute([
+            'subnet_id' => $this->subnet->id,
+            'ip_address' => '10.50.1.20',
+            'reason' => 'Reserved for future radiology console',
+        ]);
+
+        $component = Livewire::test(IpAddressesIndex::class)
+            ->set('selectedSubnetId', $this->subnet->id)
+            ->assertStatus(200);
+
+        // Ping button should be rendered in table
+        $component->assertSeeHtml("wire:click=\"pingIp('10.50.1.1')\"")
+            ->assertSeeHtml("wire:click=\"pingIp('10.50.1.10')\"")
+            ->assertSeeHtml("wire:click=\"pingIp('10.50.1.20')\"");
+    }
+
+    public function test_livewire_can_ping_candidate_ip_and_display_result(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Mock PingService
+        $mockResult = \App\Services\Network\PingResult::reachable('2ms', '14:22:10');
+        $pingServiceMock = \Mockery::mock(\App\Services\Network\PingService::class);
+        $pingServiceMock->shouldReceive('ping')
+            ->with('10.50.1.5', \Mockery::type(User::class))
+            ->once()
+            ->andReturn($mockResult);
+
+        $this->app->instance(\App\Services\Network\PingService::class, $pingServiceMock);
+
+        $component = Livewire::test(IpAddressesIndex::class)
+            ->set('selectedSubnetId', $this->subnet->id)
+            ->call('pingIp', '10.50.1.5')
+            ->assertHasNoErrors();
+
+        // Result should be stored in pingResults state and rendered beside IP
+        $pingResults = $component->get('pingResults');
+        $this->assertArrayHasKey('10.50.1.5', $pingResults);
+        $this->assertEquals('reachable', $pingResults['10.50.1.5']['status']);
+        $this->assertEquals('2ms', $pingResults['10.50.1.5']['latency']);
+
+        $component->assertSee('2ms')
+            ->assertSee('14:22:10');
+    }
 }

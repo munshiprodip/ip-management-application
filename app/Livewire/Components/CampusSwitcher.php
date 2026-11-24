@@ -22,6 +22,10 @@ class CampusSwitcher extends Component
         $siteId = ($value !== null && $value !== '' && $value !== '0') ? (int) $value : null;
         app(SiteContext::class)->setActiveSiteId($siteId);
 
+        $site = $siteId ? Site::find($siteId) : null;
+        $name = $site ? "{$site->name} ({$site->code})" : 'All Campuses (Global)';
+        session()->flash('success', "Active campus switched to {$name}.");
+
         $this->dispatch('site-changed', siteId: $siteId);
         $this->redirect(request()->header('Referer') ?? route('dashboard'), navigate: false);
     }

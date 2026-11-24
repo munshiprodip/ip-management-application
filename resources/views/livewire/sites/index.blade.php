@@ -1,6 +1,24 @@
 <div class="space-y-6">
+    <!-- Inline Flash Notifications (Direct Component Feedback) -->
+    @if (session('success'))
+        <div class="p-3 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs rounded-xl shadow-xs flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span class="font-medium">{{ session('success') }}</span>
+            </div>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="p-3 bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-xl shadow-xs flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span class="font-medium">{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
+
     <!-- Header / Context Bar -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2 text-xs text-slate-500 font-mono mb-1">
                 <a href="{{ route('dashboard') }}" class="hover:text-emerald-600">KYAMCH IPAM</a>
@@ -17,16 +35,16 @@
             <button
                 wire:click="openCreateModal"
                 type="button"
-                class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                class="w-full sm:w-auto justify-center inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-xs transition"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                Add Campus Site
+                <span>Add Campus Site</span>
             </button>
         </div>
     </div>
 
     <!-- Filters & Search Toolbar -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-wrap gap-3 items-center justify-between">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div class="w-full sm:w-72">
             <input
                 wire:model.live.debounce.300ms="search"
@@ -40,11 +58,11 @@
             <x-searchable-select 
                 placeholder="All Statuses"
                 searchPlaceholder="Search site status..."
-                containerClass="min-w-[150px]"
+                containerClass="w-full sm:w-auto min-w-[150px]"
             >
                 <select
                     wire:model.live="statusFilter"
-                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
+                    class="w-full sm:w-auto px-3 py-1.5 text-xs rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono"
                 >
                     <option value="all">All Statuses</option>
                     <option value="active">Active Only</option>
@@ -153,16 +171,30 @@
 
     <!-- Create / Edit Modal -->
     @if($showModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[92vh] overflow-y-auto my-auto">
+                <div class="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                     <h3 class="font-bold text-sm text-slate-900 dark:text-white">
                         {{ $isEditing ? 'Edit Campus Facility' : 'Add New Campus / Site' }}
                     </h3>
                     <button wire:click="$set('showModal', false)" class="text-slate-400 hover:text-slate-600">&times;</button>
                 </div>
 
-                <form wire:submit="saveSite(new \App\Actions\Site\CreateSiteAction(), new \App\Actions\Site\UpdateSiteAction())" class="p-6 space-y-4">
+                <form wire:submit="saveSite" class="p-4 sm:p-6 space-y-4">
+                    @if($errors->any())
+                        <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Please correct the errors below:</span>
+                            </div>
+                            <ul class="list-disc list-inside pl-1 text-[11px] space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Campus Name *</label>
                         <input
@@ -174,7 +206,7 @@
                         @error('name') <span class="text-[11px] text-rose-500 mt-1 block">{{ $message }}</span> @enderror
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Campus Code *</label>
                             <input
@@ -247,8 +279,8 @@
 
     <!-- Delete Confirmation Modal -->
     @if($showDeleteModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 p-4 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto my-auto">
                 <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </div>
@@ -264,7 +296,7 @@
                         Cancel
                     </button>
                     <button
-                        wire:click="deleteSite(new \App\Actions\Site\DeleteSiteAction())"
+                        wire:click="deleteSite"
                         class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg"
                     >
                         Yes, Delete

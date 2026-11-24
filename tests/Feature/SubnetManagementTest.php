@@ -256,4 +256,97 @@ class SubnetManagementTest extends TestCase
         $response->assertSee('255.255.255.0');
         $response->assertSee('10.40.10.1');
     }
+
+    public function test_aggregate_subnet_forces_allocation_enabled_false(): void
+    {
+        $createAction = app(CreateSubnetAction::class);
+        $subnet = $createAction->execute([
+            'name' => 'Campus WAN Supernet',
+            'cidr' => '172.16.0.0/12',
+            'subnet_type' => SubnetType::AGGREGATE,
+            'is_allocation_enabled' => true, // Attempt to enable
+        ]);
+
+        $this->assertFalse($subnet->allocation_enabled);
+        $this->assertFalse($subnet->isAssignable());
+    }
+
+    public function test_cannot_convert_aggregate_subnet_with_children_to_assignable(): void
+    {
+        $createAction = app(CreateSubnetAction::class);
+        $updateAction = app(UpdateSubnetAction::class);
+
+        $parent = $createAction->execute([
+            'name' => 'Campus Core Block',
+            'cidr' => '10.50.0.0/16',
+            'subnet_type' => SubnetType::AGGREGATE,
+        ]);
+
+        $createAction->execute([
+            'parent_id' => $parent->id,
+            'name' => 'Campus Child Subnet',
+            'cidr' => '10.50.1.0/24',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('has child subnets and must remain an Aggregate Container');
+
+        $updateAction->execute($parent, [
+            'subnet_type' => SubnetType::ASSIGNABLE,
+        ]);
+    }
+
+    public function test_cannot_convert_assignable_subnet_with_assigned_ips_to_aggregate(): void
+    {
+        $createAction = app(CreateSubnetAction::class);
+        $updateAction = app(UpdateSubnetAction::class);
+        $allocateAction = app(\App\Actions\AddressSpace\AllocateIpAction::class);
+
+        $subnet = $createAction->execute([
+            'name' => 'Clinical Telemetry Block',
+            'cidr' => '10.60.1.0/24',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+        ]);
+
+        $allocateAction->execute([
+            'subnet_id' => $subnet->id,
+            'ip_address' => '10.60.1.5',
+            'assigned_to' => 'ICU Bed Monitor',
+        ]);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('has active assigned IP addresses and cannot be converted to an Aggregate Container');
+
+        $updateAction->execute($subnet, [
+            'subnet_type' => SubnetType::AGGREGATE,
+        ]);
+    }
+
+    public function test_clearing_subnet_parent_validates_root_overlap(): void
+    {
+        $createAction = app(CreateSubnetAction::class);
+        $updateAction = app(UpdateSubnetAction::class);
+
+        // Root 1: 10.70.0.0/16
+        $root = $createAction->execute([
+            'name' => 'Root Block',
+            'cidr' => '10.70.0.0/16',
+            'subnet_type' => SubnetType::AGGREGATE,
+        ]);
+
+        // Child: 10.70.1.0/24
+        $child = $createAction->execute([
+            'parent_id' => $root->id,
+            'name' => 'Child Block',
+            'cidr' => '10.70.1.0/24',
+            'subnet_type' => SubnetType::ASSIGNABLE,
+        ]);
+
+        // If we try to make child a root by removing parent_id, it would overlap with existing root 10.70.0.0/16!
+        $this->expectException(ValidationException::class);
+        $updateAction->execute($child, [
+            'parent_id' => null,
+        ]);
+    }
 }

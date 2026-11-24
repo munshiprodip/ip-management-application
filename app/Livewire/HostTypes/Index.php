@@ -76,8 +76,11 @@ class Index extends Component
         $this->showModal = true;
     }
 
-    public function saveHostType(CreateHostTypeAction $createAction, UpdateHostTypeAction $updateAction): void
+    public function saveHostType(?CreateHostTypeAction $createAction = null, ?UpdateHostTypeAction $updateAction = null): void
     {
+        $createAction ??= app(CreateHostTypeAction::class);
+        $updateAction ??= app(UpdateHostTypeAction::class);
+
         $this->validate([
             'name' => ['required', 'string', 'max:64'],
             'slug' => ['nullable', 'string', 'max:64'],
@@ -95,7 +98,9 @@ class Index extends Component
                     'color' => $this->color,
                     'is_active' => $this->is_active,
                 ], auth()->user());
-                session()->flash('success', "Host type '{$hostType->name}' updated successfully.");
+                $msg = "Host type '{$hostType->name}' updated successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             } else {
                 $created = $createAction->execute([
                     'name' => $this->name,
@@ -104,24 +109,32 @@ class Index extends Component
                     'color' => $this->color,
                     'is_active' => $this->is_active,
                 ], auth()->user());
-                session()->flash('success', "Host type '{$created->name}' created successfully.");
+                $msg = "Host type '{$created->name}' created successfully.";
+                session()->flash('success', $msg);
+                $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             }
 
             $this->showModal = false;
         } catch (\Illuminate\Validation\ValidationException $ve) {
             $this->setErrorBag($ve->validator->getMessageBag());
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Validation failed: ' . $ve->getMessage()]);
         } catch (\Exception $e) {
             session()->flash('error', $e->getMessage());
+            $this->addError('name', $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
-    public function toggleStatus(int $id, UpdateHostTypeAction $action): void
+    public function toggleStatus(int $id, ?UpdateHostTypeAction $action = null): void
     {
+        $action ??= app(UpdateHostTypeAction::class);
         $hostType = HostType::findOrFail($id);
         $newStatus = ! $hostType->is_active;
 
         $action->execute($hostType, ['is_active' => $newStatus], auth()->user());
-        session()->flash('success', "Host type '{$hostType->name}' is now " . ($newStatus ? 'active' : 'inactive') . '.');
+        $msg = "Host type '{$hostType->name}' is now " . ($newStatus ? 'active' : 'inactive') . '.';
+        session()->flash('success', $msg);
+        $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
     }
 
     public function confirmDelete(int $id): void
@@ -143,8 +156,10 @@ class Index extends Component
         $this->showDeleteModal = true;
     }
 
-    public function deleteHostType(DeleteHostTypeAction $action): void
+    public function deleteHostType(?DeleteHostTypeAction $action = null): void
     {
+        $action ??= app(DeleteHostTypeAction::class);
+
         if (! $this->deleteHostTypeId) {
             return;
         }
@@ -153,17 +168,23 @@ class Index extends Component
 
         try {
             $action->execute($hostType, auth()->user());
-            session()->flash('success', "Host type '{$this->deleteHostTypeName}' deleted successfully.");
+            $msg = "Host type '{$this->deleteHostTypeName}' deleted successfully.";
+            session()->flash('success', $msg);
+            $this->dispatch('notify', ['type' => 'success', 'message' => $msg]);
             $this->showDeleteModal = false;
             $this->deleteHostTypeId = null;
         } catch (\Exception $e) {
             $this->deleteError = $e->getMessage();
+            $this->dispatch('notify', ['type' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
     public function render()
     {
-        $query = HostType::query()->withCount('ipAddresses');
+        $query = HostType::query()->withCount([
+            'ipAddresses',
+            'assignedIpAddresses as assigned_count',
+        ]);
 
         if ($this->search) {
             $query->where(function ($q) {
@@ -184,7 +205,10 @@ class Index extends Component
         $totalTypes = HostType::count();
         $activeTypes = HostType::where('is_active', true)->count();
         $systemTypes = HostType::where('is_system', true)->count();
-        $allocatedIps = IpAddress::whereNotNull('host_type')->count();
+        $allocatedIps = IpAddress::where('allocation_status', \App\Domain\AddressSpace\Enums\IpAllocationStatus::ASSIGNED)
+            ->whereNotNull('host_type')
+            ->where('host_type', '!=', '')
+            ->count();
 
         return view('livewire.host-types.index', [
             'hostTypes' => $hostTypes,

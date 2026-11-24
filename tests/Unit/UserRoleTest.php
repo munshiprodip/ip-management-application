@@ -10,23 +10,37 @@ class UserRoleTest extends TestCase
 {
     public function test_user_roles_have_accurate_labels(): void
     {
-        $this->assertEquals('Platform Super Admin', UserRole::SUPER_ADMIN->label());
-        $this->assertEquals('Network Admin', UserRole::NETWORK_ADMIN->label());
-        $this->assertEquals('IP Operator', UserRole::OPERATOR->label());
-        $this->assertEquals('Department Operator', UserRole::DEPARTMENT_OPERATOR->label());
-        $this->assertEquals('Auditor', UserRole::AUDITOR->label());
-        $this->assertEquals('Viewer', UserRole::VIEWER->label());
-        $this->assertEquals('Service Agent', UserRole::AGENT->label());
-        $this->assertEquals('Independent Approver', UserRole::APPROVER->label());
+        $this->assertEquals('Super Admin', UserRole::SUPER_ADMIN->label());
+        $this->assertEquals('Admin', UserRole::ADMIN->label());
+        $this->assertEquals('User', UserRole::USER->label());
+        $this->assertEquals('Admin', UserRole::NETWORK_ADMIN->label());
+        $this->assertEquals('User', UserRole::OPERATOR->label());
     }
 
     public function test_user_role_methods_evaluate_correctly(): void
     {
         $superAdmin = new User(['role' => UserRole::SUPER_ADMIN, 'status' => 'active']);
         $this->assertTrue($superAdmin->isSuperAdmin());
+        $this->assertTrue($superAdmin->isAdmin());
         $this->assertTrue($superAdmin->isNetworkAdmin());
         $this->assertTrue($superAdmin->isOperator());
+        $this->assertTrue($superAdmin->canManageRoles());
+        $this->assertTrue($superAdmin->canManageUsers());
         $this->assertTrue($superAdmin->canManageNetwork());
+
+        $admin = new User(['role' => UserRole::ADMIN, 'status' => 'active']);
+        $this->assertFalse($admin->isSuperAdmin());
+        $this->assertTrue($admin->isAdmin());
+        $this->assertFalse($admin->canManageRoles());
+        $this->assertTrue($admin->canManageUsers());
+        $this->assertTrue($admin->canManageNetwork());
+
+        $user = new User(['role' => UserRole::USER, 'status' => 'active']);
+        $this->assertFalse($user->isSuperAdmin());
+        $this->assertFalse($user->isAdmin());
+        $this->assertFalse($user->canManageRoles());
+        $this->assertFalse($user->canManageUsers());
+        $this->assertTrue($user->canManageNetwork());
 
         $netAdmin = new User(['role' => UserRole::NETWORK_ADMIN, 'status' => 'active']);
         $this->assertFalse($netAdmin->isSuperAdmin());
@@ -45,6 +59,8 @@ class UserRoleTest extends TestCase
 
         $inactiveAdmin = new User(['role' => UserRole::SUPER_ADMIN, 'status' => 'inactive']);
         $this->assertFalse($inactiveAdmin->canManageNetwork());
+        $this->assertFalse($inactiveAdmin->canManageUsers());
+        $this->assertFalse($inactiveAdmin->canManageRoles());
     }
 
     public function test_has_role_supports_single_and_array_arguments(): void
